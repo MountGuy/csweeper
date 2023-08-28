@@ -6,18 +6,16 @@ extern HWND ghWnd;
 extern int yBottom;
 extern int xRight;
 
-extern WCHAR ClassName[32];
 extern HINSTANCE hInst;
 
 
-extern int WindowWidthInPixels;
-extern int WindowHeightInPixels;
-extern int ScreenHeightInPixels;
-extern int WindowHeightIncludingMenu;
-extern int MenuBarHeightInPixels;
-extern BOOL HasMouseCapture;
-extern BOOL Is3x3Click;
-extern BOOL HasMouseCapture;
+extern int windowWidthInPixels;
+extern int windowHeightInPixels;
+extern int screenHeightInPixels;
+extern int windowHeightIncludingMenu;
+extern int menuBarHeightInPixels;
+extern BOOL hasMouseCapture;
+extern BOOL is3x3Click;
 
 #define WINDOW_BORDER_MOVE_WINDOW 2
 #define WINDOW_BORDER_REPAINT_WINDOW 4
@@ -29,7 +27,7 @@ extern BOOL HasMouseCapture;
 #define TIMER_ID 1
 
 ATOM MyRegisterClass(HINSTANCE hInstance);
-BOOL InitInstance(HINSTANCE, int);
+BOOL InitInstance(HINSTANCE hInstance, int nCmdShow);
 
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 void InitializeWindowBorder(DWORD borderFlags);

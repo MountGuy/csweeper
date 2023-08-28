@@ -6,69 +6,69 @@
 #include "config.h"
 #include "util.h"
 
-DWORD StateFlags = STATE_GAME_FINISHED | STATE_WINDOW_MINIMIZED;
+DWORD stateFlags = STATE_GAME_FINISHED | STATE_WINDOW_MINIMIZED;
 
-BOOL IsTimerOnAndShowed;
+BOOL isTimerOnAndShowed;
 BOOL IsTimerOnTemp;
 
-BYTE StateArray[BOARD_MAX_HEGITH][BOARD_MAX_WIDTH];
-BoardPoint ClickedBlock = { -1, -1 };
-const BoardPoint NullPoint = { -2, -2 };
+BYTE blockArray[BOARD_MAX_HEIGHT][BOARD_MAX_WIDTH];
+BoardPoint clickedPoint = { -1, -1 };
+const BoardPoint nullPoint = { -2, -2 };
 
-int GlobalSmileId;
-int LeftFlags;
-int TimerSeconds;
-int MinesCopy;
-int Width;
-int Height;
-int NumberOfEmptyBlocks;
-int NumberOfRevealedBlocks;
+int globalSmileId;
+int leftFlags;
+int timerSeconds;
+int width;
+int height;
+int numberOfEmptyBlocks;
+int numberOfRevealedBlocks;
 
-int CurrentRowColumnListIndex;
-int RowsList[10000];
-int ColumnsList[10000];
+int currentRowColumnListIndex;
+int rowsList[10000];
+int columnsList[10000];
 
 // New game
 void InitializeNewGame() {
+    int minesCopy;
     DWORD borderFlags;
 
-    if (GameConfig.Width == Width && GameConfig.Height == Height) {
+    if (gameConfig.width == width && gameConfig.height == height) {
         borderFlags = WINDOW_BORDER_REPAINT_WINDOW;
     }
     else {
         borderFlags = WINDOW_BORDER_MOVE_WINDOW | WINDOW_BORDER_REPAINT_WINDOW;
     }
 
-    Width = GameConfig.Width;
-    Height = GameConfig.Height;
+    width = gameConfig.width;
+    height = gameConfig.height;
 
     InitializeBlockArrayBorders();
 
-    GlobalSmileId = 0;
+    globalSmileId = 0;
 
     // Setup all the mines
-    MinesCopy = GameConfig.Mines;
+    minesCopy = gameConfig.mines;
 
     do {
         BoardPoint randomPoint;
 
         // Find a location for the mine
         do {
-            randomPoint.Column = GetRandom(Width) + 1;
-            randomPoint.Row = GetRandom(Height) + 1;
+            randomPoint.column = GetRandom(width) + 1;
+            randomPoint.row = GetRandom(height) + 1;
         } while (BLOCK_IS_REVEALED(ACCESS_BLOCK(randomPoint)));
 
         // SET A MINE
         ACCESS_BLOCK(randomPoint) |= BOMB_FLAG;
-        MinesCopy--;
-    } while (MinesCopy);
+        minesCopy--;
+    } while (minesCopy);
 
-    TimerSeconds = 0;
-    MinesCopy = GameConfig.Mines;
-    LeftFlags = MinesCopy;
-    NumberOfRevealedBlocks = 0;
-    NumberOfEmptyBlocks = (Height * Width) - GameConfig.Mines;
-    StateFlags = STATE_GAME_IS_ON;
+    timerSeconds = 0;
+    minesCopy = gameConfig.mines;
+    leftFlags = minesCopy;
+    numberOfRevealedBlocks = 0;
+    numberOfEmptyBlocks = (height * width) - gameConfig.mines;
+    stateFlags = STATE_GAME_IS_ON;
     AddAndDisplayLeftFlags(0); // Should have called DisplayLeftFlags()!
     InitializeWindowBorder(borderFlags);
 }
@@ -86,35 +86,35 @@ BOOL InitializeBitmapsAndBlockArray() {
 // Fill in the board with borders
 void InitializeBlockArrayBorders() {
 
-    for (int i = 0; i < BOARD_MAX_HEGITH; i++) {
-        for (int j = 0; j < BOARD_MAX_WIDTH; j++) {
-            StateArray[i][j] = BLOCK_STATE_EMPTY_UNCLICKED;
+    for (int row = 1; row <= height; row++) {
+        for (int column = 1; column <= width; column++) {
+            blockArray[row][column] = BLOCK_STATE_EMPTY_UNCLICKED;
         }
     }
-    for (int column = Width + 1; column >= 0; column--) {
+    for (int column = 0; column <= width + 1; column++) {
         // Fill upper border
-        StateArray[0][column] = BLOCK_STATE_BORDER_VALUE;
+        blockArray[0][column] = BLOCK_STATE_BORDER_VALUE;
 
         // Fill lower border
-        StateArray[Height + 1][column] = BLOCK_STATE_BORDER_VALUE;
+        blockArray[height + 1][column] = BLOCK_STATE_BORDER_VALUE;
     }
 
-    for (int row = Height + 1; row >= 0; row--) {
+    for (int row = 0; row <= height + 1; row++) {
         // Fill left border
-        StateArray[row][0] = BLOCK_STATE_BORDER_VALUE;
+        blockArray[row][0] = BLOCK_STATE_BORDER_VALUE;
 
         // Fill right border
-        StateArray[row][Width + 1] = BLOCK_STATE_BORDER_VALUE;
+        blockArray[row][width + 1] = BLOCK_STATE_BORDER_VALUE;
     }
 }
 
 // Called on button release
 // Called on MouseMove 
 void ReleaseMouseCapture() {
-    HasMouseCapture = FALSE;
+    hasMouseCapture = FALSE;
     ReleaseCapture();
 
-    if (StateFlags & STATE_GAME_IS_ON) {
+    if (GAME_IS_ON()) {
         // Mouse move always gets here
         HandleBlockClick();
         ReleaseBlocksClick();
@@ -125,26 +125,23 @@ void ReleaseMouseCapture() {
 }
 
 __inline void ReleaseBlocksClick() {
-    UpdateClickedBlocksState(NullPoint);
+    UpdateClickedPointsState(nullPoint);
 }
 
 // Change the block state and draw it
 void ChangeBlockState(BoardPoint point, BYTE blockState) {
-    PBYTE pBlock = &ACCESS_BLOCK(point);
-
-    *pBlock = (*pBlock & 0xE0) | blockState;
-
+    ACCESS_BLOCK(point) = BLOCK_INFO(ACCESS_BLOCK(point)) | blockState;
     DrawBlock(point);
 }
 
 // Handles every block click release
 void HandleBlockClick() {
-    if (IsInBoardRange(ClickedBlock)) {
+    if (IsInBoardRange(clickedPoint)) {
         // First Click! Initialize Timer 
-        if (NumberOfRevealedBlocks == 0 && TimerSeconds == 0) {
-            TimerSeconds++;
+        if (numberOfRevealedBlocks == 0 && timerSeconds == 0) {
+            timerSeconds++;
             DisplayTimerSeconds();
-            IsTimerOnAndShowed = TRUE;
+            isTimerOnAndShowed = TRUE;
 
             if (!SetTimer(ghWnd, TIMER_ID, 1000, NULL)) {
                 DisplayErrorMessage(ID_TIMER_ERROR);
@@ -152,60 +149,60 @@ void HandleBlockClick() {
         }
 
         //In valid: skip this click
-        if (!(StateFlags & STATE_GAME_IS_ON)) {
-            ClickedBlock = NullPoint;
+        if (!GAME_IS_ON()) {
+            clickedPoint = nullPoint;
             return;
         }
 
         // Case of 3x3 click
-        if (Is3x3Click) {
-            Handle3x3BlockClick(ClickedBlock);
+        if (is3x3Click) {
+            Handle3x3BlockClick(clickedPoint);
         }
         else {
-            BYTE blockValue = ACCESS_BLOCK(ClickedBlock);
+            BYTE block = ACCESS_BLOCK(clickedPoint);
 
-            if (!BLOCK_IS_REVEALED(blockValue) && !BLOCK_IS_STATE(blockValue, BLOCK_STATE_1P_FLAG)) {
-                HandleNormalBlockClick(ClickedBlock);
+            if (!BLOCK_IS_REVEALED(block) && !BLOCK_IS_STATE(block, BLOCK_STATE_1P_FLAG)) {
+                HandleNormalBlockClick(clickedPoint);
             }
         }
     }
 
-    DisplaySmile(GlobalSmileId);
+    DisplaySmile(globalSmileId);
 }
 
-void UpdateClickedBlocksState(BoardPoint point) {
-    if (point.Column == ClickedBlock.Column && point.Row == ClickedBlock.Row) {
+void UpdateClickedPointsState(BoardPoint point) {
+    if (point.column == clickedPoint.column && point.row == clickedPoint.row) {
         return;
     }
 
     // Save old click point
-    const BoardPoint oldClickPoint = ClickedBlock;
+    const BoardPoint oldPoint = clickedPoint;
 
     // Update new click point
-    ClickedBlock = point;
+    clickedPoint = point;
 
-    if (Is3x3Click) {
-        UpdateClickedBlocksState3x3(point, oldClickPoint);
+    if (is3x3Click) {
+        UpdateClickedPointsState3x3(point, oldPoint);
     }
     else {
-        UpdateClickedBlocksStateNormal(point, oldClickPoint);
+        UpdateClickedPointsStateNormal(point, oldPoint);
     }
 }
 
 void HandleNormalBlockClick(BoardPoint point) {
-    PBYTE pFunctionBlock = &ACCESS_BLOCK(point);
+    PBYTE pTargetBlock = &ACCESS_BLOCK(point);
 
     // Click an empty block
-    if (!BLOCK_IS_BOMB(*pFunctionBlock)) {
+    if (!BLOCK_IS_BOMB(*pTargetBlock)) {
         ExpandEmptyBlock(point);
 
-        if (NumberOfRevealedBlocks == NumberOfEmptyBlocks) {
+        if (numberOfRevealedBlocks == numberOfEmptyBlocks) {
             FinishGame(TRUE);
         }
     }
     // Clicked a bomb and it's the first block 
-    else if (NumberOfRevealedBlocks == 0) {
-        ReplaceFirstNonBomb(point, pFunctionBlock);
+    else if (numberOfRevealedBlocks == 0) {
+        ReplaceFirstNonBomb(point, pTargetBlock);
     }
     // Clicked A Bomb
     else {
@@ -214,42 +211,41 @@ void HandleNormalBlockClick(BoardPoint point) {
     }
 }
 
-__inline void UpdateClickedBlocksStateNormal(BoardPoint newClick, BoardPoint oldClick) {
-    if (IsInBoardRange(oldClick) && !(BLOCK_IS_REVEALED(ACCESS_BLOCK(oldClick)))) {
-        UpdateBlockStateToUnclicked(oldClick);
-        DrawBlock(oldClick);
+__inline void UpdateClickedPointsStateNormal(BoardPoint newPoint, BoardPoint oldPoint) {
+    if (IsInBoardRange(oldPoint) && !(BLOCK_IS_REVEALED(ACCESS_BLOCK(oldPoint)))) {
+        UpdateBlockStateToUnClicked(oldPoint);
+        DrawBlock(oldPoint);
     }
 
-    if (IsInBoardRange(newClick)) {
-        const BYTE block = ACCESS_BLOCK(newClick);
+    if (IsInBoardRange(newPoint)) {
+        const BYTE block = ACCESS_BLOCK(newPoint);
 
         if (!BLOCK_IS_REVEALED(block) && !BLOCK_IS_STATE(block, BLOCK_STATE_1P_FLAG)) {
-            UpdateBlockStateToClicked(ClickedBlock);
-            DrawBlock(ClickedBlock);
+            UpdateBlockStateToClicked(clickedPoint);
+            DrawBlock(clickedPoint);
         }
     }
 }
 
 // 3x3 click handler. Assume that the point is in board range
 void Handle3x3BlockClick(BoardPoint point) {
-    BYTE Block = ACCESS_BLOCK(point);
-    BYTE BlockState = BLOCK_STATE(Block);
+    BYTE block = ACCESS_BLOCK(point);
 
-    if (BLOCK_IS_REVEALED(Block) && GetFlagBlocksCount(point) == BlockState) {
+    if (BLOCK_IS_REVEALED(block) && GetFlagBlocksCount(point) == BLOCK_STATE(block)) {
         BOOL lostGame = FALSE;
 
-        for (int loopRow = (point.Row - 1); loopRow <= (point.Row + 1); loopRow++) {
-            for (int loopColumn = (point.Column - 1); loopColumn <= (point.Column + 1); loopColumn++) {
+        for (int loopRow = (point.row - 1); loopRow <= (point.row + 1); loopRow++) {
+            for (int loopColumn = (point.column - 1); loopColumn <= (point.column + 1); loopColumn++) {
                 BoardPoint point = { loopRow, loopColumn };
-                BYTE Block = ACCESS_BLOCK(point);
+                BYTE block = ACCESS_BLOCK(point);
 
                 // The user clicked a non flaged bomb
-                if (BLOCK_STATE(Block) != BLOCK_STATE_1P_FLAG && BLOCK_IS_BOMB(Block)) {
+                if (!BLOCK_IS_STATE(block, BLOCK_STATE_1P_FLAG) && BLOCK_IS_BOMB(block)) {
                     lostGame = TRUE;
                     ChangeBlockState(point, REVEALED_FLAG | BLOCK_STATE_1P_BOMB_RED_BACKGROUND);
                 }
                 // The user clicked an empty block
-                else if (!BLOCK_IS_BOMB(Block)) {
+                else if (!BLOCK_IS_BOMB(block)) {
                     ExpandEmptyBlock(point);
                 }
                 // The rest case is flag
@@ -259,7 +255,7 @@ void Handle3x3BlockClick(BoardPoint point) {
         if (lostGame) {
             FinishGame(FALSE);
         }
-        else if (NumberOfEmptyBlocks == NumberOfRevealedBlocks) {
+        else if (numberOfEmptyBlocks == numberOfRevealedBlocks) {
             FinishGame(TRUE);
         }
     }
@@ -270,42 +266,26 @@ void Handle3x3BlockClick(BoardPoint point) {
 }
 
 // For the mouse move with 3x3 click, redraw old blocks and draw new blocks
-__inline void UpdateClickedBlocksState3x3(BoardPoint newClick, BoardPoint oldClick) {
-    BOOL isNewLocationInBounds = IsInBoardRange(newClick);
-    BOOL isOldLocationInBounds = IsInBoardRange(oldClick);
-
-    // Get 3x3 bounds for the old and new clicks
-    int oldTopRow = max(1, oldClick.Row - 1);
-    int oldBottomRow = min(Height, oldClick.Row + 1);
-
-    int topRow = max(1, newClick.Row - 1);
-    int bottomRow = min(Height, newClick.Row + 1);
-
-    int oldLeftColumn = max(1, oldClick.Column - 1);
-    int oldRightColumn = min(Width, oldClick.Column + 1);
-
-    int leftColumn = max(1, newClick.Column - 1);
-    int rightColumn = min(Width, newClick.Column + 1);
-
+__inline void UpdateClickedPointsState3x3(BoardPoint newPoint, BoardPoint oldPoint) {
     // Change old to unclicked
-    if (isOldLocationInBounds) {
-        for (int loopRow = oldTopRow; loopRow <= oldBottomRow; loopRow++) {
-            for (int loopColumn = oldLeftColumn; loopColumn <= oldRightColumn; loopColumn++) {
-                BoardPoint point = { loopRow, loopColumn };
-                BYTE Block = ACCESS_BLOCK(point);
-                if (!BLOCK_IS_REVEALED(Block) && BLOCK_STATE(Block) == BLOCK_STATE_READ_EMPTY) {
-                    UpdateBlockStateToUnclicked(point);
+    if (IsInBoardRange(oldPoint)) {
+        for (int r = oldPoint.row - 1; r <= oldPoint.row + 1; r++) {
+            for (int c = oldPoint.column - 1; c <= oldPoint.column + 1; c++) {
+                BoardPoint point = { r, c };
+                BYTE block = ACCESS_BLOCK(point);
+                if (IsInBoardRange(point) && !BLOCK_IS_REVEALED(block) && BLOCK_STATE(block) == BLOCK_STATE_READ_EMPTY) {
+                    UpdateBlockStateToUnClicked(point);
                     DrawBlock(point);
                 }
             }
         }
     }
-    if (isNewLocationInBounds) {
-        for (int loopRow = topRow; loopRow <= bottomRow; loopRow++) {
-            for (int loopColumn = leftColumn; loopColumn <= rightColumn; loopColumn++) {
-                BoardPoint point = { loopRow, loopColumn };
-                BYTE Block = ACCESS_BLOCK(point);
-                if (!BLOCK_IS_REVEALED(Block) && BLOCK_STATE(Block) == BLOCK_STATE_EMPTY_UNCLICKED) {
+    if (IsInBoardRange(newPoint)) {
+        for (int r = newPoint.row - 1; r <= newPoint.row + 1; r++) {
+            for (int c = newPoint.column - 1; c <= newPoint.column + 1; c++) {
+                BoardPoint point = { r, c };
+                BYTE block = ACCESS_BLOCK(point);
+                if (IsInBoardRange(point) && !BLOCK_IS_REVEALED(block) && BLOCK_STATE(block) == BLOCK_STATE_EMPTY_UNCLICKED) {
                     UpdateBlockStateToClicked(point);
                     DrawBlock(point);
                 }
@@ -320,7 +300,7 @@ __inline void UpdateBlockStateToClicked(BoardPoint point) {
 }
 
 // Reset the block state to unclicked
-__inline void UpdateBlockStateToUnclicked(BoardPoint point) {
+__inline void UpdateBlockStateToUnClicked(BoardPoint point) {
     ACCESS_BLOCK(point) = BLOCK_INFO(ACCESS_BLOCK(point)) | BLOCK_STATE_EMPTY_UNCLICKED;
 }
 
@@ -328,7 +308,7 @@ __inline void UpdateBlockStateToUnclicked(BoardPoint point) {
 
 // Check if the block is in the board range
 __inline BOOL IsInBoardRange(BoardPoint point) {
-    return point.Column > 0 && point.Row > 0 && point.Column <= Width && point.Row <= Height;
+    return point.column > 0 && point.row > 0 && point.column <= width && point.row <= height;
 }
 
 // Handler when the first click is bomb
@@ -336,10 +316,9 @@ __inline void ReplaceFirstNonBomb(BoardPoint point, PBYTE pFunctionBlock) {
     // The first block! Change a normal block to a bomb, 
     // Replace the current block into an empty block
     // Reveal the current block
-    // WIERD: LOOP IS WITHOUT AN EQUAL SIGN
-    for (int current_row = 1; current_row < Height; ++current_row) {
-        for (int current_column = 1; current_column < Width; ++current_column) {
-            PBYTE pLoopBlock = &StateArray[current_row][current_column];
+    for (int r = 1; r <= height; r++) {
+        for (int c = 1; c <= width; c++) {
+            PBYTE pLoopBlock = &blockArray[r][c];
 
             // Find the first non-bomb
             if (!BLOCK_IS_BOMB(*pLoopBlock)) {
@@ -358,17 +337,13 @@ __inline void ReplaceFirstNonBomb(BoardPoint point, PBYTE pFunctionBlock) {
 int GetFlagBlocksCount(BoardPoint point) {
     int flagsCount = 0;
 
-    // Search in the sorrunding blocks
-    for (int loopRow = (point.Row - 1); loopRow <= (point.Row + 1); ++loopRow) {
-        for (int loopColumn = (point.Column - 1); loopColumn <= (point.Column + 1); ++loopColumn) {
-
-            BYTE blockValue = StateArray[loopRow][loopColumn] & BLOCK_STATE_MASK;
-
-            if (blockValue == BLOCK_STATE_1P_FLAG) {
+    // Search in the surrounding blocks
+    for (int r = (point.row - 1); r <= (point.row + 1); ++r) {
+        for (int c = (point.column - 1); c <= (point.column + 1); ++c) {
+            if (BLOCK_STATE(blockArray[r][c]) == BLOCK_STATE_1P_FLAG) {
                 flagsCount++;
             }
         }
-
     }
 
     return flagsCount;
@@ -376,38 +351,36 @@ int GetFlagBlocksCount(BoardPoint point) {
 
 // Count the number of bombs near the block
 int CountNearBombs(BoardPoint point) {
-    int count = 0;
+    int bombCount = 0;
 
-    for (int loopRow = (point.Row - 1); loopRow <= (point.Row + 1); loopRow++) {
-        for (int loopColumn = (point.Column - 1); loopColumn <= (point.Column + 1); loopColumn++) {
-            if (BLOCK_IS_BOMB(StateArray[loopRow][loopColumn])) {
-                count++;
+    for (int r = (point.row - 1); r <= (point.row + 1); r++) {
+        for (int c = (point.column - 1); c <= (point.column + 1); c++) {
+            if (BLOCK_IS_BOMB(blockArray[r][c])) {
+                bombCount++;
             }
         }
     }
 
-    return count;
+    return bombCount;
 }
 
 // BFS for empty blocks and show them
 void ExpandEmptyBlock(BoardPoint point) {
-    CurrentRowColumnListIndex = 1;
+    currentRowColumnListIndex = 1;
     ShowBlockValue(point);
 
     int i = 1;
 
-    while (i != CurrentRowColumnListIndex) {
-        int row = RowsList[i];
-        int column = ColumnsList[i];
-        BoardPoint point;
+    while (i != currentRowColumnListIndex) {
+        int row = rowsList[i];
+        int column = columnsList[i];
 
-        for (int column_loop = column - 1; column_loop <= column + 1; column_loop++) {
-            for (int row_loop = row - 1; row_loop <= row + 1; row_loop++) {
-                if (row_loop == row && column_loop == column) {
+        for (int c = column - 1; c <= column + 1; c++) {
+            for (int r = row - 1; r <= row + 1; r++) {
+                if (r == row && c == column) {
                     continue;
                 }
-                point.Column = column_loop;
-                point.Row = row_loop;
+                BoardPoint point = { r, c };
                 ShowBlockValue(point);
             }
         }
@@ -433,20 +406,20 @@ void ShowBlockValue(BoardPoint point) {
         return;
     }
 
-    NumberOfRevealedBlocks++;
+    numberOfRevealedBlocks++;
 
     int nearBombsCount = CountNearBombs(point);
     ACCESS_BLOCK(point) = nearBombsCount | REVEALED_FLAG;
     DrawBlock(point);
 
     if (nearBombsCount == 0) {
-        RowsList[CurrentRowColumnListIndex] = point.Row;
-        ColumnsList[CurrentRowColumnListIndex] = point.Column;
+        rowsList[currentRowColumnListIndex] = point.row;
+        columnsList[currentRowColumnListIndex] = point.column;
 
-        CurrentRowColumnListIndex++;
+        currentRowColumnListIndex++;
 
-        if (CurrentRowColumnListIndex == 10000) {
-            CurrentRowColumnListIndex = 0;
+        if (currentRowColumnListIndex == 10000) {
+            currentRowColumnListIndex = 0;
         }
     }
 }
@@ -454,53 +427,51 @@ void ShowBlockValue(BoardPoint point) {
 // Display all blocks when the game is over
 void RevealAllBombs(BYTE revealedBombsState) {
 
-    for (int loopRow = 1; loopRow <= Height; ++loopRow) {
-        for (int loopColumn = 1; loopColumn <= Width; ++loopColumn) {
-            PBYTE pBlock = &StateArray[loopRow][loopColumn];
+    for (int r = 1; r <= height; ++r) {
+        for (int c = 1; c <= width; ++c) {
+            BYTE block = blockArray[r][c];
+            PBYTE pBlock = &blockArray[r][c];
+            BYTE blockState = BLOCK_STATE(block);
+            BYTE blockInfo = BLOCK_INFO(block);
 
-            if (BLOCK_IS_REVEALED(*pBlock)) {
+            if (BLOCK_IS_REVEALED(block)) {
                 continue;
             }
 
-            BYTE blockState = *pBlock & BLOCK_STATE_MASK;
-
-            if (BLOCK_IS_BOMB(*pBlock)) {
-                if (blockState != BLOCK_STATE_1P_FLAG) {
-                    *pBlock = (*pBlock & 0xe0) | revealedBombsState;
+            if (BLOCK_IS_BOMB(block)) {
+                if (!BLOCK_IS_STATE(blockState, BLOCK_STATE_1P_FLAG)) {
+                    blockArray[r][c] = blockInfo | revealedBombsState;
                 }
             }
             else if (blockState == BLOCK_STATE_1P_FLAG) {
                 // This is not a bomb, but flagged by the user
-                *pBlock = (*pBlock & 0xeb) | BLOCK_STATE_1P_BOMB_WITH_X;
+                blockArray[r][c] = blockInfo | BLOCK_STATE_1P_BOMB_WITH_X;
             }
         }
     }
-
     DisplayAllBlocks();
 }
 
 // Game finisher
 void FinishGame(BOOL isWon) {
-    IsTimerOnAndShowed = FALSE;
-    GlobalSmileId = (isWon) ? SMILE_WINNER : SMILE_LOST;
-    DisplaySmile(GlobalSmileId);
+    isTimerOnAndShowed = FALSE;
+    globalSmileId = (isWon) ? SMILE_WINNER : SMILE_LOST;
+    DisplaySmile(globalSmileId);
 
     // If the player wins, bombs are changed into borderFlags
     // If the player loses, bombs change into black bombs
     RevealAllBombs((isWon) ? BLOCK_STATE_1P_FLAG : BLOCK_STATE_BLACK_BOMB);
 
-    if (isWon && LeftFlags != 0) {
-        AddAndDisplayLeftFlags(-LeftFlags);
+    if (isWon && leftFlags != 0) {
+        AddAndDisplayLeftFlags(-leftFlags);
     }
 
-    StateFlags = STATE_GAME_FINISHED;
+    stateFlags = STATE_GAME_FINISHED;
 
     // Check if it is the best time
-    if (isWon && GameConfig.Difficulty != DIFFICULTY_CUSTOM) {
-        if (TimerSeconds < GameConfig.Times[GameConfig.Difficulty]) {
-            GameConfig.Times[GameConfig.Difficulty] = TimerSeconds;
-            //SaveWinnerNameDialogBox();
-            //WinnersDialogBox();
+    if (isWon && gameConfig.difficulty != DIFFICULTY_CUSTOM) {
+        if (timerSeconds < gameConfig.times[gameConfig.difficulty]) {
+            gameConfig.times[gameConfig.difficulty] = timerSeconds;
         }
     }
 }
@@ -527,7 +498,7 @@ BOOL HandleLeftClick(DWORD dwLocation) {
         return FALSE;
     }
     
-    GlobalSmileId = SMILE_NORMAL;
+    globalSmileId = SMILE_NORMAL;
     DisplaySmile(SMILE_NORMAL);
     InitializeNewGame();
     return TRUE;
@@ -553,7 +524,7 @@ void HandleRightClick(BoardPoint point) {
             ChangeBlockState(point, blockState);
 
             if (BLOCK_IS_STATE(block, BLOCK_STATE_1P_FLAG) &&
-                NumberOfRevealedBlocks == NumberOfEmptyBlocks) {
+                numberOfRevealedBlocks == numberOfEmptyBlocks) {
                 FinishGame(TRUE);
             }
         }
@@ -561,8 +532,8 @@ void HandleRightClick(BoardPoint point) {
 }
 
 void TickSeconds() {
-    if (IsTimerOnAndShowed && TimerSeconds < 999) {
-        TimerSeconds++;
+    if (isTimerOnAndShowed && timerSeconds < 999) {
+        timerSeconds++;
         DisplayTimerSeconds();
     }
 }

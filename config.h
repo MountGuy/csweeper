@@ -34,23 +34,22 @@ typedef WCHAR NameString[32];
 // Those variables here are in the same order of the strings array
 // It's seems like they are represented as a struct
 typedef struct _Config {
-    short Difficulty;
-    int Mines;
+    short difficulty;
+    int mines;
 
-    DWORD Height;
-    DWORD Width;
+    DWORD height;
+    DWORD width;
 
     // In Pixels, Screen Coordinates
-    int Xpos;
-    int Ypos;
-    int Tick;
-    int Menu;
-    BOOL Color;
-    int Times[4];
-    NameString Names[4];
+    int xpos;
+    int ypos;
+    int tick;
+    int menu;
+    BOOL color;
+    int times[4];
+    NameString names[4];
 } Config;
 
-extern Config GameConfig;
+extern Config gameConfig;
 
 void InitializeConfigFromDefault();
-void SaveConfigToRegistry();

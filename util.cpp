@@ -24,7 +24,7 @@ void DisplayErrorMessage(UINT uID) {
     MessageBoxW(NULL, Buffer, Caption, MB_ICONERROR);
 }
 
-VOID LoadResourceString(UINT uID, LPWSTR lpBuffer, DWORD cchBufferMax) {
+void LoadResourceString(UINT uID, LPWSTR lpBuffer, DWORD cchBufferMax) {
     if (!LoadStringW(hInst, uID, lpBuffer, cchBufferMax)) {
         DisplayErrorMessage(1001);
     }

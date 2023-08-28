@@ -18,7 +18,7 @@ __inline void ProcessBlockBitmaps();
 BOOL LoadBitmaps();
 
 void AddAndDisplayLeftFlags(DWORD leftFlagsToAdd);
-void DisplayNumber(HDC hDC, int xPosition, int numberToDisplay);
+void DisplayNumber(HDC hDC, int xPosition, int numberToDisplay, int numberType);
 void DisplayLeftFlags();
 void DisplayLeftFlagsOnDC(HDC hDC);
 void DisplaySmile(DWORD smileId);
@@ -31,6 +31,6 @@ void DisplayAllBlocksInDC(HDC hDC);
 void DrawBackground(HDC hDC);
 void DrawBlock(BoardPoint point);
 void RedrawUIOnDC(HDC hDC);
-void DrawHUDRectangle(HDC hDC, RECT rect, int lines_width, char white_or_copypen);
+void DrawHUDRectangle(HDC hDC, RECT rect, int linesWidth, char whiteOrCopyPen);
 void DrawHUDRectangles(HDC hDC);
-void SetROPWrapper(HDC hDC, BYTE white_or_copypen);
+void SetROPWrapper(HDC hDC, BYTE whiteOrCopyPen);

@@ -26,11 +26,11 @@ PBITMAPINFO lpBitmapInfo;
 HGLOBAL hBitmapResource;
 HPEN hPen;
 
-HDC BlockStates[18];
-HBITMAP BlockBitmaps[18];
+HDC blockDCs[18];
+HBITMAP blockBitmaps[18];
 
 __inline void InitializePen() {
-    if (GameConfig.Color) {
+    if (gameConfig.color) {
         hPen = CreatePen(PS_SOLID, 1, RGB(128, 128, 128));
     }
     else {
@@ -63,24 +63,24 @@ __inline BOOL LoadBitmapResources() {
 __inline void ProcessBlockBitmaps() {
     HDC hWndDC = GetDC(ghWnd);
 
-    for (int i = 0; i < _countof(BlockStates); ++i) {
-        BlockStates[i] = CreateCompatibleDC(hWndDC);
+    for (int i = 0; i < _countof(blockDCs); ++i) {
+        blockDCs[i] = CreateCompatibleDC(hWndDC);
 
-        if (BlockStates[i] == NULL) {
+        if (blockDCs[i] == NULL) {
             // Maybe that means the original name of the function was "FLoad"
             // This is a bad name dude. 
             OutputDebugStringA("FLoad failed to create compatible dc\n");
             exit(1);
         }
 
-        BlockBitmaps[i] = CreateCompatibleBitmap(hWndDC, 16, 16);
+        blockBitmaps[i] = CreateCompatibleBitmap(hWndDC, 16, 16);
 
-        if (BlockBitmaps[i] == NULL) {
+        if (blockBitmaps[i] == NULL) {
             OutputDebugStringA("Failed to create Bitmap\n");
             exit(1);
         }
-        SelectObject(BlockStates[i], BlockBitmaps[i]);
-        SetDIBitsToDevice(BlockStates[i],
+        SelectObject(blockDCs[i], blockBitmaps[i]);
+        SetDIBitsToDevice(blockDCs[i],
             0, 0,
             16, 16,
             0 + 16 * i, 108,
@@ -109,7 +109,7 @@ BOOL LoadBitmaps() {
 //-----------------------------------------------------------
 
 void AddAndDisplayLeftFlags(DWORD leftFlagsToAdd) {
-    LeftFlags += leftFlagsToAdd;
+    leftFlags += leftFlagsToAdd;
     DisplayLeftFlags();
 }
 
@@ -158,13 +158,13 @@ void DisplayLeftFlagsOnDC(HDC hDC) {
     int lowDigit;
     int highNum;
 
-    if (LeftFlags >= 0) {
-        lowDigit = (LeftFlags / 1000) % 10;
-        highNum = LeftFlags % 1000;
+    if (leftFlags >= 0) {
+        lowDigit = (leftFlags / 1000) % 10;
+        highNum = leftFlags % 1000;
     }
     else {
         lowDigit = NUM_MINUS;
-        highNum = LeftFlags % 1000;
+        highNum = leftFlags % 1000;
     }
 
     DisplayNumber(hDC, 16, lowDigit, USE_FLAG_NUM);
@@ -214,10 +214,10 @@ void DisplayTimerSecondsOnDC(HDC hDC) {
         SetLayout(hDC, 0);
     }
 
-    DisplayNumber(hDC, xRight - 68, (TimerSeconds / 1000) % 10, USE_TIME_NUM);
-    DisplayNumber(hDC, xRight - 55, (TimerSeconds / 100) % 10, USE_TIME_NUM);
-    DisplayNumber(hDC, xRight - 42, (TimerSeconds / 10) % 10, USE_TIME_NUM);
-    DisplayNumber(hDC, xRight - 29, TimerSeconds % 10, USE_TIME_NUM);
+    DisplayNumber(hDC, xRight - 68, (timerSeconds / 1000) % 10, USE_TIME_NUM);
+    DisplayNumber(hDC, xRight - 55, (timerSeconds / 100) % 10, USE_TIME_NUM);
+    DisplayNumber(hDC, xRight - 42, (timerSeconds / 10) % 10, USE_TIME_NUM);
+    DisplayNumber(hDC, xRight - 29, timerSeconds % 10, USE_TIME_NUM);
 
     if (layout & 1) {
         SetLayout(hDC, layout);
@@ -232,15 +232,15 @@ void DisplayAllBlocks() {
 
 void DisplayAllBlocksInDC(HDC hDC) {
     int y = 55;
-    for (int loop_row = 1; loop_row <= Height; ++loop_row) {
+    for (int r = 1; r <= height; ++r) {
         int x = 12;
 
-        for (int loop_column = 1; loop_column <= Width; loop_column++) {
+        for (int c = 1; c <= width; c++) {
             // Get the current state of the block
-            BYTE blockValue = StateArray[loop_row][loop_column];
+            BYTE block = blockArray[r][c];
 
-            HDC blockState = BlockStates[blockValue & BLOCK_STATE_MASK];
-            blockState = BlockStates[blockValue & BLOCK_STATE_MASK];
+            HDC blockState = blockDCs[BLOCK_STATE(block)];
+            blockState = blockDCs[BLOCK_STATE(block)];
 
             // Draw the block
             BitBlt(hDC, x, y, 16, 16, blockState, 0, 0, SRCCOPY);
@@ -255,8 +255,8 @@ void DisplayAllBlocksInDC(HDC hDC) {
 
 void DrawBlock(BoardPoint point) {
     HDC hDC = GetDC(ghWnd);
-    BYTE BlockValue = ACCESS_BLOCK(point) & BLOCK_STATE_MASK;
-    BitBlt(hDC, point.Column * 16 - 4, point.Row * 16 + 39, BLOCK_WIDTH, BLOCK_HEIGHT, BlockStates[BlockValue], 0, 0, SRCCOPY);
+    BYTE block = BLOCK_STATE(ACCESS_BLOCK(point));
+    BitBlt(hDC, point.column * 16 - 4, point.row * 16 + 39, BLOCK_WIDTH, BLOCK_HEIGHT, blockDCs[block], 0, 0, SRCCOPY);
     ReleaseDC(ghWnd, hDC);
 }
 
@@ -264,7 +264,7 @@ void RedrawUIOnDC(HDC hDC) {
     DrawBackground(hDC);
     DrawHUDRectangles(hDC);
     DisplayLeftFlagsOnDC(hDC);
-    DisplaySmileOnDC(hDC, GlobalSmileId);
+    DisplaySmileOnDC(hDC, globalSmileId);
     DisplayTimerSecondsOnDC(hDC);
     DisplayAllBlocksInDC(hDC);
 }
@@ -278,11 +278,11 @@ void DrawBackground(HDC hDC) {
     FillRect(hDC, &rect, (HBRUSH)GetStockObject(LTGRAY_BRUSH));
 }
 
-void DrawHUDRectangle(HDC hDC, RECT rect, int lines_width, char white_or_copypen) {
+void DrawHUDRectangle(HDC hDC, RECT rect, int lineWidth, char whiteOrCopyPen) {
 
-    SetROPWrapper(hDC, white_or_copypen);
+    SetROPWrapper(hDC, whiteOrCopyPen);
 
-    for (int i = 0; i < lines_width; i++) {
+    for (int i = 0; i < lineWidth; i++) {
         rect.bottom--;
         MoveToEx(hDC, rect.left, rect.bottom, NULL);
 
@@ -296,11 +296,11 @@ void DrawHUDRectangle(HDC hDC, RECT rect, int lines_width, char white_or_copypen
         rect.top++;
     }
 
-    if (white_or_copypen < 2) {
-        SetROPWrapper(hDC, white_or_copypen ^ 1);
+    if (whiteOrCopyPen < 2) {
+        SetROPWrapper(hDC, whiteOrCopyPen ^ 1);
     }
 
-    for (int i = 0; i < lines_width; i++) {
+    for (int i = 0; i < lineWidth; i++) {
         rect.bottom++;
         MoveToEx(hDC, rect.left - 1, rect.bottom, NULL);
         rect.left--;
@@ -341,8 +341,8 @@ void DrawHUDRectangles(HDC hDC) {
     DrawHUDRectangle(hDC, rect, 1, 0);
 }
 
-void SetROPWrapper(HDC hDC, BYTE white_or_copypen) {
-    if (white_or_copypen & 1) {
+void SetROPWrapper(HDC hDC, BYTE whiteOrCopyPen) {
+    if (whiteOrCopyPen & 1) {
         SetROP2(hDC, R2_WHITE);
     }
     else {
