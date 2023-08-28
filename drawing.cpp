@@ -38,8 +38,8 @@ __inline void InitializePen() {
     }
 }
 
-__inline HGLOBAL TryLoadBitmapResource(USHORT resourceId) {
-    HRSRC hRsrc = FindResourceW(hInst, (LPCWSTR)(resourceId), (LPWSTR)RT_BITMAP);
+__inline HGLOBAL TryLoadBitmapResource(USHORT resourceID) {
+    HRSRC hRsrc = FindResourceW(hInst, (LPCWSTR)(resourceID), (LPWSTR)RT_BITMAP);
 
     if (hRsrc != NULL) {
         return LoadResource(hInst, hRsrc);
@@ -61,7 +61,7 @@ __inline BOOL LoadBitmapResources() {
 }
 
 __inline void ProcessBlockBitmaps() {
-    HDC hWndDC = GetDC(ghWnd);
+    HDC hWndDC = GetDC(hWnd);
 
     for (int i = 0; i < _countof(blockDCs); ++i) {
         blockDCs[i] = CreateCompatibleDC(hWndDC);
@@ -91,7 +91,7 @@ __inline void ProcessBlockBitmaps() {
         );
     }
 
-    ReleaseDC(ghWnd, hWndDC);
+    ReleaseDC(hWnd, hWndDC);
 }
 
 BOOL LoadBitmaps() {
@@ -142,9 +142,9 @@ void DisplayNumber(HDC hDC, int xPosition, int numberToDisplay, int numberType) 
 }
 
 void DisplayLeftFlags() {
-    HDC hDC = GetDC(ghWnd);
+    HDC hDC = GetDC(hWnd);
     DisplayLeftFlagsOnDC(hDC);
-    ReleaseDC(ghWnd, hDC);
+    ReleaseDC(hWnd, hDC);
 }
 
 void DisplayLeftFlagsOnDC(HDC hDC) {
@@ -177,20 +177,20 @@ void DisplayLeftFlagsOnDC(HDC hDC) {
     }
 }
 
-void DisplaySmile(DWORD smileId) {
-    HDC hDC = GetDC(ghWnd);
-    DisplaySmileOnDC(hDC, smileId);
-    ReleaseDC(ghWnd, hDC);
+void DisplaySmile(DWORD smileID) {
+    HDC hDC = GetDC(hWnd);
+    DisplaySmileOnDC(hDC, smileID);
+    ReleaseDC(hWnd, hDC);
 }
 
-void DisplaySmileOnDC(HDC hDC, DWORD smileId) {
+void DisplaySmileOnDC(HDC hDC, DWORD smileID) {
     SetDIBitsToDevice(
         hDC, // hdc
         (xRight - 24) / 2, // x
         16, // y
         23, // w
         23, // h
-        150 + 23 * smileId, // xSrc
+        150 + 23 * smileID, // xSrc
         69, // ySrc 
         0, // ScanStart
         23 + 69, // cLines
@@ -201,9 +201,9 @@ void DisplaySmileOnDC(HDC hDC, DWORD smileId) {
 }
 
 void DisplayTimerSeconds() {
-    HDC hDC = GetDC(ghWnd);
+    HDC hDC = GetDC(hWnd);
     DisplayTimerSecondsOnDC(hDC);
-    ReleaseDC(ghWnd, hDC);
+    ReleaseDC(hWnd, hDC);
 }
 
 void DisplayTimerSecondsOnDC(HDC hDC) {
@@ -225,9 +225,9 @@ void DisplayTimerSecondsOnDC(HDC hDC) {
 }
 
 void DisplayAllBlocks() {
-    HDC hDC = GetDC(ghWnd);
+    HDC hDC = GetDC(hWnd);
     DisplayAllBlocksInDC(hDC);
-    ReleaseDC(ghWnd, hDC);
+    ReleaseDC(hWnd, hDC);
 }
 
 void DisplayAllBlocksInDC(HDC hDC) {
@@ -254,17 +254,17 @@ void DisplayAllBlocksInDC(HDC hDC) {
 //-----------------------------------------------------------
 
 void DrawBlock(BoardPoint point) {
-    HDC hDC = GetDC(ghWnd);
+    HDC hDC = GetDC(hWnd);
     BYTE block = BLOCK_STATE(ACCESS_BLOCK(point));
     BitBlt(hDC, point.column * 16 - 4, point.row * 16 + 39, BLOCK_WIDTH, BLOCK_HEIGHT, blockDCs[block], 0, 0, SRCCOPY);
-    ReleaseDC(ghWnd, hDC);
+    ReleaseDC(hWnd, hDC);
 }
 
 void RedrawUIOnDC(HDC hDC) {
     DrawBackground(hDC);
     DrawHUDRectangles(hDC);
     DisplayLeftFlagsOnDC(hDC);
-    DisplaySmileOnDC(hDC, globalSmileId);
+    DisplaySmileOnDC(hDC, globalSmileID);
     DisplayTimerSecondsOnDC(hDC);
     DisplayAllBlocksInDC(hDC);
 }

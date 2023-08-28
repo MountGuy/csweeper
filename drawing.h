@@ -11,7 +11,7 @@
 #define SMILE_BITMAP_HEIGHT 24
 
 __inline void InitializePen();
-__inline HGLOBAL TryLoadBitmapResource(USHORT resourceId);
+__inline HGLOBAL TryLoadBitmapResource(USHORT resourceID);
 __inline BOOL LoadBitmapResources();
 __inline void ProcessBlockBitmaps();
 
@@ -21,8 +21,8 @@ void AddAndDisplayLeftFlags(DWORD leftFlagsToAdd);
 void DisplayNumber(HDC hDC, int xPosition, int numberToDisplay, int numberType);
 void DisplayLeftFlags();
 void DisplayLeftFlagsOnDC(HDC hDC);
-void DisplaySmile(DWORD smileId);
-void DisplaySmileOnDC(HDC hDC, DWORD smileId);
+void DisplaySmile(DWORD smileID);
+void DisplaySmileOnDC(HDC hDC, DWORD smileID);
 void DisplayTimerSeconds();
 void DisplayTimerSecondsOnDC(HDC hDC);
 void DisplayAllBlocks();

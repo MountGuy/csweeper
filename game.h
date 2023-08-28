@@ -6,7 +6,7 @@ typedef struct {
     int column;
 } BoardPoint;
 
-extern int globalSmileId;
+extern int globalSmileID;
 extern int leftFlags;
 extern int width;
 extern int height;
@@ -68,14 +68,14 @@ void ChangeBlockState(BoardPoint point, BYTE blockState);
 void HandleBlockClick();
 void UpdateClickedPointsState(BoardPoint point);
 void HandleNormalBlockClick(BoardPoint point);
-__inline void UpdateClickedPointsStateNormal(BoardPoint newClick, BoardPoint oldClick);
+__inline void UpdateClickedPointsStateNormal(BoardPoint newPoint, BoardPoint oldPoint);
 void Handle3x3BlockClick(BoardPoint point);
-__inline void UpdateClickedPointsState3x3(BoardPoint newClick, BoardPoint oldClick);
+__inline void UpdateClickedPointsState3x3(BoardPoint newPoint, BoardPoint oldPoint);
 void UpdateBlockStateToClicked(BoardPoint point);
 void UpdateBlockStateToUnClicked(BoardPoint point);
 
 __inline BOOL IsInBoardRange(BoardPoint point);
-__inline void ReplaceFirstNonBomb(BoardPoint point, PBYTE pFunctionBlock);
+__inline void ReplaceFirstNonBomb(BoardPoint point);
 int GetFlagBlocksCount(BoardPoint point);
 int CountNearBombs(BoardPoint point);
 void ExpandEmptyBlock(BoardPoint point);

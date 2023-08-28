@@ -32,7 +32,7 @@ int CheatPasswordIndex;
 int yBottom = 0;
 int xRight = 0;
 
-HWND ghWnd;
+HWND hWnd;
 HMENU hMenu;
 BOOL Minimized;
 BOOL IgnoreSingleClick;
@@ -67,16 +67,16 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 {
    hInst = hInstance;
 
-   ghWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
+   hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
       CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
 
-   if (!ghWnd)
+   if (!hWnd)
    {
       return FALSE;
    }
 
-   ShowWindow(ghWnd, nCmdShow);
-   UpdateWindow(ghWnd);
+   ShowWindow(hWnd, nCmdShow);
+   UpdateWindow(hWnd);
 
    return TRUE;
 }
@@ -101,8 +101,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 
     InitializeMenu(gameConfig.menu);
     InitializeNewGame();
-    ShowWindow(ghWnd, nCmdShow);
-    UpdateWindow(ghWnd);
+    ShowWindow(hWnd, nCmdShow);
+    UpdateWindow(hWnd);
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_CSWEEPER));
 
@@ -120,7 +120,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
     return (int) msg.wParam;
 }
 
-LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
     {
@@ -145,10 +145,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             ReleaseBlocksClick();
             is3x3Click = TRUE;
 
-            PostMessageW(hWnd, WM_MOUSEMOVE, wParam, lParam);
+            PostMessageW(hwnd, WM_MOUSEMOVE, wParam, lParam);
         }
         else if (wParam & 1) {
-            CaptureMouseInput(ghWnd, message, wParam, lParam);
+            CaptureMouseInput(message, wParam, lParam);
         }
         else if (!IsMenuOpen) {
             BoardPoint point = { (HIWORD(lParam) - 39) / 16, (LOWORD(lParam) + 4) / 16 };
@@ -157,7 +157,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
         return FALSE;
     case WM_MOUSEMOVE:
-        return MouseMoveHandler(ghWnd, message, wParam, lParam);
+        return MouseMoveHandler(message, wParam, lParam);
 
     case WM_LBUTTONDOWN:
         if (IgnoreSingleClick) {
@@ -173,13 +173,13 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
 
         is3x3Click = (wParam & 6) ? TRUE : FALSE;
-        return CaptureMouseInput(ghWnd, message, wParam, lParam);
+        return CaptureMouseInput(message, wParam, lParam);
     case WM_PAINT:
         {
             PAINTSTRUCT ps;
-            HDC hdc = BeginPaint(hWnd, &ps);
+            HDC hdc = BeginPaint(hwnd, &ps);
             RedrawUIOnDC(hdc);
-            EndPaint(hWnd, &ps);
+            EndPaint(hwnd, &ps);
         }
         break;
     case WM_TIMER:
@@ -189,9 +189,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         PostQuitMessage(0);
         break;
     default:
-        return DefWindowProc(hWnd, message, wParam, lParam);
+        return DefWindowProc(hwnd, message, wParam, lParam);
     }
-    return DefWindowProcW(hWnd, message, wParam, lParam);
 }
 
 void InitializeWindowBorder(DWORD borderFlags) {
@@ -199,7 +198,7 @@ void InitializeWindowBorder(DWORD borderFlags) {
     RECT rcGameMenu;
     RECT rcHelpMenu;
 
-    if (ghWnd == NULL) {
+    if (hWnd == NULL) {
         return;
     }
 
@@ -210,8 +209,8 @@ void InitializeWindowBorder(DWORD borderFlags) {
 
 
         if (hMenu != NULL &&
-            GetMenuItemRect(ghWnd, hMenu, GAME_MENU_INDEX, &rcGameMenu) &&
-            GetMenuItemRect(ghWnd, hMenu, HELP_MENU_INDEX, &rcHelpMenu) &&
+            GetMenuItemRect(hWnd, hMenu, GAME_MENU_INDEX, &rcGameMenu) &&
+            GetMenuItemRect(hWnd, hMenu, HELP_MENU_INDEX, &rcHelpMenu) &&
             rcGameMenu.top != rcHelpMenu.top) {
             differentCordsForMenus = TRUE;
             // Add it twice
@@ -247,7 +246,7 @@ void InitializeWindowBorder(DWORD borderFlags) {
     }
 
     if (borderFlags & WINDOW_BORDER_MOVE_WINDOW) {
-        MoveWindow(ghWnd,
+        MoveWindow(hWnd,
             gameConfig.xpos, gameConfig.ypos,
             windowWidthInPixels + xRight,
             yBottom + windowHeightIncludingMenu,
@@ -256,19 +255,19 @@ void InitializeWindowBorder(DWORD borderFlags) {
 
     if (differentCordsForMenus &&
         hMenu != NULL &&
-        GetMenuItemRect(ghWnd, hMenu, 0, &rcGameMenu) &&
-        GetMenuItemRect(ghWnd, hMenu, 1, &rcHelpMenu) &&
+        GetMenuItemRect(hWnd, hMenu, 0, &rcGameMenu) &&
+        GetMenuItemRect(hWnd, hMenu, 1, &rcHelpMenu) &&
         rcGameMenu.top == rcHelpMenu.top) {
         windowHeightIncludingMenu -= menuBarHeightInPixels;
 
-        MoveWindow(ghWnd, gameConfig.xpos, gameConfig.ypos, windowWidthInPixels + xRight, yBottom + windowHeightIncludingMenu, TRUE);
+        MoveWindow(hWnd, gameConfig.xpos, gameConfig.ypos, windowWidthInPixels + xRight, yBottom + windowHeightIncludingMenu, TRUE);
     }
 
     if (borderFlags & WINDOW_BORDER_REPAINT_WINDOW) {
         RECT rc;
         SetRect(&rc, 0, 0, xRight, yBottom);
         // Cause a Repaint of the whole window
-        InvalidateRect(ghWnd, &rc, TRUE);
+        InvalidateRect(hWnd, &rc, TRUE);
     }
 }
 
@@ -283,7 +282,7 @@ void InitializeCheckedMenuItems() {
 void InitializeMenu(DWORD menuFlags) {
     gameConfig.menu = menuFlags;
     InitializeCheckedMenuItems();
-    //SetMenu(ghWnd, (GameConfig.Menu & 1) ? NULL : hMenu);
+    //SetMenu(hWnd, (GameConfig.Menu & 1) ? NULL : hMenu);
     InitializeWindowBorder(WINDOW_BORDER_MOVE_WINDOW);
 }
 
@@ -316,20 +315,21 @@ DWORD SimpleGetSystemMetrics(DWORD val) {
     return result;
 }
 
-__inline LRESULT CaptureMouseInput(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+// hasMouseCapture = True
+__inline LRESULT CaptureMouseInput(UINT message, WPARAM wParam, LPARAM lParam) {
     // Shared code...
-    SetCapture(ghWnd);
+    SetCapture(hWnd);
     BoardPoint point = { -1, -1 };
     clickedPoint = point;
     hasMouseCapture = TRUE;
     DisplaySmile(SMILE_WOW);
-    return MouseMoveHandler(hwnd, uMsg, wParam, lParam);
+    return MouseMoveHandler(message, wParam, lParam);
 }
 
-__inline LRESULT MouseMoveHandler(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+__inline LRESULT MouseMoveHandler(UINT message, WPARAM wParam, LPARAM lParam) {
     // WM_MOUSEMOVE_Handler!
     if (!hasMouseCapture) {
-        return DefWindowProcW(ghWnd, uMsg, wParam, lParam);
+        return DefWindowProcW(hWnd, message, wParam, lParam);
     }
     else if (!GAME_IS_ON()) {
         ReleaseMouseCapture();
@@ -340,5 +340,5 @@ __inline LRESULT MouseMoveHandler(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lP
         UpdateClickedPointsState(point);
     }
 
-    return DefWindowProcW(ghWnd, uMsg, wParam, lParam);
+    return DefWindowProcW(hWnd, message, wParam, lParam);
 }

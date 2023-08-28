@@ -15,7 +15,7 @@ BYTE blockArray[BOARD_MAX_HEIGHT][BOARD_MAX_WIDTH];
 BoardPoint clickedPoint = { -1, -1 };
 const BoardPoint nullPoint = { -2, -2 };
 
-int globalSmileId;
+int globalSmileID;
 int leftFlags;
 int timerSeconds;
 int width;
@@ -44,7 +44,7 @@ void InitializeNewGame() {
 
     InitializeBlockArrayBorders();
 
-    globalSmileId = 0;
+    globalSmileID = 0;
 
     // Setup all the mines
     minesCopy = gameConfig.mines;
@@ -143,7 +143,7 @@ void HandleBlockClick() {
             DisplayTimerSeconds();
             isTimerOnAndShowed = TRUE;
 
-            if (!SetTimer(ghWnd, TIMER_ID, 1000, NULL)) {
+            if (!SetTimer(hWnd, TIMER_ID, 1000, NULL)) {
                 DisplayErrorMessage(ID_TIMER_ERROR);
             }
         }
@@ -167,7 +167,7 @@ void HandleBlockClick() {
         }
     }
 
-    DisplaySmile(globalSmileId);
+    DisplaySmile(globalSmileID);
 }
 
 void UpdateClickedPointsState(BoardPoint point) {
@@ -190,10 +190,8 @@ void UpdateClickedPointsState(BoardPoint point) {
 }
 
 void HandleNormalBlockClick(BoardPoint point) {
-    PBYTE pTargetBlock = &ACCESS_BLOCK(point);
-
     // Click an empty block
-    if (!BLOCK_IS_BOMB(*pTargetBlock)) {
+    if (!BLOCK_IS_BOMB(ACCESS_BLOCK(point))) {
         ExpandEmptyBlock(point);
 
         if (numberOfRevealedBlocks == numberOfEmptyBlocks) {
@@ -202,7 +200,7 @@ void HandleNormalBlockClick(BoardPoint point) {
     }
     // Clicked a bomb and it's the first block 
     else if (numberOfRevealedBlocks == 0) {
-        ReplaceFirstNonBomb(point, pTargetBlock);
+        ReplaceFirstNonBomb(point);
     }
     // Clicked A Bomb
     else {
@@ -312,19 +310,17 @@ __inline BOOL IsInBoardRange(BoardPoint point) {
 }
 
 // Handler when the first click is bomb
-__inline void ReplaceFirstNonBomb(BoardPoint point, PBYTE pFunctionBlock) {
+__inline void ReplaceFirstNonBomb(BoardPoint point) {
     // The first block! Change a normal block to a bomb, 
     // Replace the current block into an empty block
     // Reveal the current block
     for (int r = 1; r <= height; r++) {
         for (int c = 1; c <= width; c++) {
-            PBYTE pLoopBlock = &blockArray[r][c];
-
             // Find the first non-bomb
-            if (!BLOCK_IS_BOMB(*pLoopBlock)) {
+            if (!BLOCK_IS_BOMB(blockArray[r][c])) {
                 // Replace bomb place
-                *pFunctionBlock = BLOCK_STATE_EMPTY_UNCLICKED;
-                *pLoopBlock |= BOMB_FLAG;
+                ACCESS_BLOCK(point) = BLOCK_STATE_EMPTY_UNCLICKED;
+                blockArray[r][c] |= BOMB_FLAG;
 
                 ExpandEmptyBlock(point);
                 return;
@@ -455,8 +451,8 @@ void RevealAllBombs(BYTE revealedBombsState) {
 // Game finisher
 void FinishGame(BOOL isWon) {
     isTimerOnAndShowed = FALSE;
-    globalSmileId = (isWon) ? SMILE_WINNER : SMILE_LOST;
-    DisplaySmile(globalSmileId);
+    globalSmileID = (isWon) ? SMILE_WINNER : SMILE_LOST;
+    DisplaySmile(globalSmileID);
 
     // If the player wins, bombs are changed into borderFlags
     // If the player loses, bombs change into black bombs
@@ -498,7 +494,7 @@ BOOL HandleLeftClick(DWORD dwLocation) {
         return FALSE;
     }
     
-    globalSmileId = SMILE_NORMAL;
+    globalSmileID = SMILE_NORMAL;
     DisplaySmile(SMILE_NORMAL);
     InitializeNewGame();
     return TRUE;

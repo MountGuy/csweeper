@@ -2,7 +2,7 @@
 
 #include "resource.h"
 
-extern HWND ghWnd;
+extern HWND hWnd;
 extern int yBottom;
 extern int xRight;
 
@@ -35,5 +35,5 @@ void InitializeCheckedMenuItems();
 void InitializeMenu(DWORD menuFlags);
 void SetMenuItemState(DWORD uID, BOOL isChecked);
 DWORD SimpleGetSystemMetrics(DWORD val);
-__inline LRESULT CaptureMouseInput(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-__inline LRESULT MouseMoveHandler(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+__inline LRESULT CaptureMouseInput(UINT message, WPARAM wParam, LPARAM lParam);
+__inline LRESULT MouseMoveHandler(UINT message, WPARAM wParam, LPARAM lParam);
