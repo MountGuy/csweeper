@@ -66,11 +66,13 @@ void ReleaseMouseCapture();
 __inline void ReleaseBlocksClick();
 void ChangeBlockState(BoardPoint point, BYTE blockState);
 void HandleBlockClick();
-void UpdateClickedPointsState(BoardPoint point);
 void HandleNormalBlockClick(BoardPoint point);
-__inline void UpdateClickedPointsStateNormal(BoardPoint newPoint, BoardPoint oldPoint);
 void Handle3x3BlockClick(BoardPoint point);
-__inline void UpdateClickedPointsState3x3(BoardPoint newPoint, BoardPoint oldPoint);
+
+void UpdateClickedPointsState(BoardPoint point);
+void UpdateClickedPointsStateNormal(BoardPoint newPoint, BoardPoint oldPoint);
+void UpdateClickedPointsState3x3(BoardPoint newPoint, BoardPoint oldPoint);
+
 void UpdateBlockStateToClicked(BoardPoint point);
 void UpdateBlockStateToUnClicked(BoardPoint point);
 

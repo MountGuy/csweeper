@@ -33,6 +33,11 @@ void InitializeConfigFromDefault() {
     gameConfig.names[TIME_INTERMIDIATE][0] = 0;
     gameConfig.names[TIME_EXPERT][0] = 0;
     gameConfig.names[TIME_MAXIMUM][0] = 0;
+    
+    screenHeightInPixels = GetSystemMetrics(SM_CYCAPTION) + 35;
+    menuBarHeightInPixels = GetSystemMetrics(SM_CYMENU) + 1;
+    windowHeightInPixels = GetSystemMetrics(SM_CYBORDER) + 1;
+    windowWidthInPixels = GetSystemMetrics(SM_CXBORDER) + 14;
 
     HDC hDC = GetDC(GetDesktopWindow());
     int desktopColors = GetDeviceCaps(hDC, NUMCOLORS);

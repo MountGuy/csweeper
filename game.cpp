@@ -108,14 +108,14 @@ void InitializeBlockArrayBorders() {
     }
 }
 
-// Called on button release
-// Called on MouseMove 
+// Called on button up and MouseMoveHandler with click
+// The only function that makes hasMouseCapture = FALSE
 void ReleaseMouseCapture() {
     hasMouseCapture = FALSE;
     ReleaseCapture();
 
+    // Mouse move always gets here
     if (GAME_IS_ON()) {
-        // Mouse move always gets here
         HandleBlockClick();
         ReleaseBlocksClick();
     }
@@ -124,6 +124,8 @@ void ReleaseMouseCapture() {
     }
 }
 
+// Set clicked point to a nullPoint and call UpdateClickedPointsState
+// So the blocks will be redrawn
 __inline void ReleaseBlocksClick() {
     UpdateClickedPointsState(nullPoint);
 }
@@ -148,13 +150,13 @@ void HandleBlockClick() {
             }
         }
 
-        //In valid: skip this click
+        //Invalid: skip this click
         if (!GAME_IS_ON()) {
             clickedPoint = nullPoint;
             return;
         }
 
-        // Case of 3x3 click
+        // Check if 3x3 click
         if (is3x3Click) {
             Handle3x3BlockClick(clickedPoint);
         }
@@ -170,25 +172,8 @@ void HandleBlockClick() {
     DisplaySmile(globalSmileID);
 }
 
-void UpdateClickedPointsState(BoardPoint point) {
-    if (point.column == clickedPoint.column && point.row == clickedPoint.row) {
-        return;
-    }
-
-    // Save old click point
-    const BoardPoint oldPoint = clickedPoint;
-
-    // Update new click point
-    clickedPoint = point;
-
-    if (is3x3Click) {
-        UpdateClickedPointsState3x3(point, oldPoint);
-    }
-    else {
-        UpdateClickedPointsStateNormal(point, oldPoint);
-    }
-}
-
+// Normal click handler. Assume that the point is in board range
+// Called by click release
 void HandleNormalBlockClick(BoardPoint point) {
     // Click an empty block
     if (!BLOCK_IS_BOMB(ACCESS_BLOCK(point))) {
@@ -209,32 +194,17 @@ void HandleNormalBlockClick(BoardPoint point) {
     }
 }
 
-__inline void UpdateClickedPointsStateNormal(BoardPoint newPoint, BoardPoint oldPoint) {
-    if (IsInBoardRange(oldPoint) && !(BLOCK_IS_REVEALED(ACCESS_BLOCK(oldPoint)))) {
-        UpdateBlockStateToUnClicked(oldPoint);
-        DrawBlock(oldPoint);
-    }
-
-    if (IsInBoardRange(newPoint)) {
-        const BYTE block = ACCESS_BLOCK(newPoint);
-
-        if (!BLOCK_IS_REVEALED(block) && !BLOCK_IS_STATE(block, BLOCK_STATE_1P_FLAG)) {
-            UpdateBlockStateToClicked(clickedPoint);
-            DrawBlock(clickedPoint);
-        }
-    }
-}
-
 // 3x3 click handler. Assume that the point is in board range
+// Called by click release
 void Handle3x3BlockClick(BoardPoint point) {
     BYTE block = ACCESS_BLOCK(point);
 
     if (BLOCK_IS_REVEALED(block) && GetFlagBlocksCount(point) == BLOCK_STATE(block)) {
         BOOL lostGame = FALSE;
 
-        for (int loopRow = (point.row - 1); loopRow <= (point.row + 1); loopRow++) {
-            for (int loopColumn = (point.column - 1); loopColumn <= (point.column + 1); loopColumn++) {
-                BoardPoint point = { loopRow, loopColumn };
+        for (int r = (point.row - 1); r <= (point.row + 1); r++) {
+            for (int c = (point.column - 1); c <= (point.column + 1); c++) {
+                BoardPoint point = { r, c };
                 BYTE block = ACCESS_BLOCK(point);
 
                 // The user clicked a non flaged bomb
@@ -263,8 +233,47 @@ void Handle3x3BlockClick(BoardPoint point) {
     }
 }
 
+// Handle for redraw when the mouse is moved
+void UpdateClickedPointsState(BoardPoint point) {
+    if (point.column == clickedPoint.column && point.row == clickedPoint.row) {
+        return;
+    }
+
+    // Save old click point
+    const BoardPoint oldPoint = clickedPoint;
+
+    // Update new click point
+    clickedPoint = point;
+
+    if (is3x3Click) {
+        UpdateClickedPointsState3x3(point, oldPoint);
+    }
+    else {
+        UpdateClickedPointsStateNormal(point, oldPoint);
+    }
+}
+
 // For the mouse move with 3x3 click, redraw old blocks and draw new blocks
-__inline void UpdateClickedPointsState3x3(BoardPoint newPoint, BoardPoint oldPoint) {
+// Called by UpdateClickedPointsState
+void UpdateClickedPointsStateNormal(BoardPoint newPoint, BoardPoint oldPoint) {
+    if (IsInBoardRange(oldPoint) && !(BLOCK_IS_REVEALED(ACCESS_BLOCK(oldPoint)))) {
+        UpdateBlockStateToUnClicked(oldPoint);
+        DrawBlock(oldPoint);
+    }
+
+    if (IsInBoardRange(newPoint)) {
+        const BYTE block = ACCESS_BLOCK(newPoint);
+
+        if (!BLOCK_IS_REVEALED(block) && !BLOCK_IS_STATE(block, BLOCK_STATE_1P_FLAG)) {
+            UpdateBlockStateToClicked(clickedPoint);
+            DrawBlock(clickedPoint);
+        }
+    }
+}
+
+// For the mouse move with 3x3 click, redraw old blocks and draw new blocks
+// Called by UpdateClickedPointsState
+void UpdateClickedPointsState3x3(BoardPoint newPoint, BoardPoint oldPoint) {
     // Change old to unclicked
     if (IsInBoardRange(oldPoint)) {
         for (int r = oldPoint.row - 1; r <= oldPoint.row + 1; r++) {
@@ -278,6 +287,7 @@ __inline void UpdateClickedPointsState3x3(BoardPoint newPoint, BoardPoint oldPoi
             }
         }
     }
+    // Change new to clicked
     if (IsInBoardRange(newPoint)) {
         for (int r = newPoint.row - 1; r <= newPoint.row + 1; r++) {
             for (int c = newPoint.column - 1; c <= newPoint.column + 1; c++) {
@@ -475,6 +485,7 @@ void FinishGame(BOOL isWon) {
 //-----------------------------------------------------------
 
 // Handle for smile button left click
+// Return TRUE if the click is in the range of the smile button
 BOOL HandleLeftClick(DWORD dwLocation) {
     MSG msg;
     RECT rect;
@@ -500,12 +511,13 @@ BOOL HandleLeftClick(DWORD dwLocation) {
     return TRUE;
 }
 
+// Handle for right click. The game reacts to the right click immediately
 void HandleRightClick(BoardPoint point) {
     if (IsInBoardRange(point)) {
         BYTE block = ACCESS_BLOCK(point);
 
         if (!BLOCK_IS_REVEALED(block)) {
-            BYTE blockState = block & BLOCK_STATE_MASK;
+            BYTE blockState = BLOCK_STATE(block);
 
             switch (blockState) {
             case BLOCK_STATE_1P_FLAG:

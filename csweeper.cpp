@@ -35,7 +35,6 @@ int xRight = 0;
 HWND hWnd;
 HMENU hMenu;
 BOOL Minimized;
-BOOL IgnoreSingleClick;
 
 BOOL hasMouseCapture;
 BOOL is3x3Click;
@@ -105,7 +104,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
     UpdateWindow(hWnd);
 
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_CSWEEPER));
-
     MSG msg;
 
     while (GetMessage(&msg, nullptr, 0, 0))
@@ -132,24 +130,22 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         break;
     case WM_RBUTTONDOWN:
-        if (IgnoreSingleClick) {
-            IgnoreSingleClick = FALSE;
-            return FALSE;
-        }
-
         if (!GAME_IS_ON()) {
             break;
         }
 
+        // Left button is already clicked
         if (hasMouseCapture) {
             ReleaseBlocksClick();
             is3x3Click = TRUE;
 
             PostMessageW(hwnd, WM_MOUSEMOVE, wParam, lParam);
         }
+        // Left button is clicked together
         else if (wParam & 1) {
             CaptureMouseInput(message, wParam, lParam);
         }
+        // Right button is clicked only
         else if (!IsMenuOpen) {
             BoardPoint point = { (HIWORD(lParam) - 39) / 16, (LOWORD(lParam) + 4) / 16 };
             HandleRightClick(point);
@@ -160,10 +156,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
         return MouseMoveHandler(message, wParam, lParam);
 
     case WM_LBUTTONDOWN:
-        if (IgnoreSingleClick) {
-            IgnoreSingleClick = FALSE;
-            return FALSE;
-        }
+        // Handle for smile click
+        // The case if the player clicked the smile button
         if (HandleLeftClick((DWORD)lParam)) {
             return 0;
         }
@@ -172,8 +166,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
             break;
         }
 
+        // Shift or right button is clicked together
         is3x3Click = (wParam & 6) ? TRUE : FALSE;
         return CaptureMouseInput(message, wParam, lParam);
+
     case WM_PAINT:
         {
             PAINTSTRUCT ps;
@@ -185,14 +181,17 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_TIMER:
         TickSeconds();
         return FALSE;
+
     case WM_DESTROY:
         PostQuitMessage(0);
         break;
+
     default:
-        return DefWindowProc(hwnd, message, wParam, lParam);
+        return DefWindowProcW(hwnd, message, wParam, lParam);
     }
 }
 
+// Set window size
 void InitializeWindowBorder(DWORD borderFlags) {
     BOOL differentCordsForMenus = FALSE;
     RECT rcGameMenu;
@@ -249,7 +248,7 @@ void InitializeWindowBorder(DWORD borderFlags) {
         MoveWindow(hWnd,
             gameConfig.xpos, gameConfig.ypos,
             windowWidthInPixels + xRight,
-            yBottom + windowHeightIncludingMenu,
+            windowHeightIncludingMenu + yBottom,
             TRUE);
     }
 
@@ -260,7 +259,7 @@ void InitializeWindowBorder(DWORD borderFlags) {
         rcGameMenu.top == rcHelpMenu.top) {
         windowHeightIncludingMenu -= menuBarHeightInPixels;
 
-        MoveWindow(hWnd, gameConfig.xpos, gameConfig.ypos, windowWidthInPixels + xRight, yBottom + windowHeightIncludingMenu, TRUE);
+        MoveWindow(hWnd, gameConfig.xpos, gameConfig.ypos, windowWidthInPixels + xRight, windowHeightIncludingMenu + yBottom, TRUE);
     }
 
     if (borderFlags & WINDOW_BORDER_REPAINT_WINDOW) {
@@ -290,6 +289,7 @@ void SetMenuItemState(DWORD uID, BOOL isChecked) {
     CheckMenuItem(hMenu, uID, isChecked ? MF_CHECKED : MF_BYCOMMAND);
 }
 
+// Wrapper of GetSystemMetrics
 DWORD SimpleGetSystemMetrics(DWORD val) {
     DWORD result;
 
@@ -315,7 +315,8 @@ DWORD SimpleGetSystemMetrics(DWORD val) {
     return result;
 }
 
-// hasMouseCapture = True
+// The only function that makes hasMouseCapture = True
+// Called by WM_LBUTTONDOWN and WM_RBUTTONDOWN
 __inline LRESULT CaptureMouseInput(UINT message, WPARAM wParam, LPARAM lParam) {
     // Shared code...
     SetCapture(hWnd);
@@ -326,6 +327,7 @@ __inline LRESULT CaptureMouseInput(UINT message, WPARAM wParam, LPARAM lParam) {
     return MouseMoveHandler(message, wParam, lParam);
 }
 
+// Called by CaptureMouseInput and WM_MOUSEMOVE
 __inline LRESULT MouseMoveHandler(UINT message, WPARAM wParam, LPARAM lParam) {
     // WM_MOUSEMOVE_Handler!
     if (!hasMouseCapture) {
