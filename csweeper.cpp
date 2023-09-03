@@ -36,9 +36,10 @@ HWND hWnd;
 HMENU hMenu;
 BOOL Minimized;
 
-BOOL hasMouseCapture;
-BOOL is3x3Click;
+BOOL hasInputCaptures[2] = { FALSE, FALSE };
+BOOL is3x3Clicks[2] = { FALSE, FALSE };
 BOOL IsMenuOpen;
+BOOL blink;
 
 
 ATOM MyRegisterClass(HINSTANCE hInstance)
@@ -103,6 +104,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
     ShowWindow(hWnd, nCmdShow);
     UpdateWindow(hWnd);
 
+    if (!SetTimer(hWnd, BLINK_TIMER_ID, 200, NULL)) {
+        DisplayErrorMessage(ID_TIMER_ERROR);
+    }
+
     HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_CSWEEPER));
     MSG msg;
 
@@ -120,13 +125,76 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
+    BoardPoint oldPoint;
+    
     switch (message)
     {
     case WM_LBUTTONUP:
     case WM_RBUTTONUP:
     case WM_MBUTTONUP:
-        if (hasMouseCapture) {
-            ReleaseMouseCapture();
+        if (hasInputCaptures[ID_1P]) {
+            ReleaseInputCapture(ID_1P);
+        }
+        break;
+    case WM_KEYUP:
+        switch (wParam) {
+        case VK_F2:
+            InitializeNewGame();
+            break;
+        case VK_Z:
+        case VK_X:
+            if (hasInputCaptures[ID_2P]) {
+                ReleaseInputCapture(ID_2P);
+            }
+            break;
+        }
+        break;
+    case WM_KEYDOWN:
+        switch (wParam) {
+            case VK_X:
+                if (!GAME_IS_ON()) {
+                    break;
+                }
+
+                // Left button is already clicked
+                if (hasInputCaptures[ID_2P]) {
+                    ReleaseBlocksInput(ID_2P);
+                    is3x3Clicks[ID_2P] = TRUE;
+                    UpdateInputPointsState(cursorPoint, ID_2P);
+                }
+                // Right button is clicked only
+                else if (!IsMenuOpen) {
+                    HandleRightInput(cursorPoint, ID_2P);
+                }
+                break;
+            case VK_Z:
+                if (!GAME_IS_ON()) {
+                    break;
+                }
+
+                // Shift or right button is clicked together
+                is3x3Clicks[ID_2P] = (GetKeyState(VK_X) & 0x8000)? TRUE : FALSE;
+                SetCapture(hWnd);
+                focusedPoints[ID_2P] = nullPoint;
+                hasInputCaptures[ID_2P] = TRUE;
+                DisplaySmile(SMILE_WOW);
+                UpdateInputPointsState(cursorPoint, ID_2P);
+
+                return DefWindowProcW(hWnd, message, wParam, lParam);
+            case VK_UP:
+            case VK_DOWN:
+            case VK_LEFT:
+            case VK_RIGHT:
+                oldPoint = cursorPoint;
+                if (wParam == VK_UP) cursorPoint.row = max(cursorPoint.row - 1, 1);
+                if (wParam == VK_DOWN) cursorPoint.row = min(cursorPoint.row + 1, height);
+                if (wParam == VK_LEFT) cursorPoint.column = max(cursorPoint.column - 1, 1);
+                if (wParam == VK_RIGHT) cursorPoint.column = min(cursorPoint.column + 1, width);
+                DrawBlock(oldPoint);
+                if (hasInputCaptures[ID_2P]) {
+                    UpdateInputPointsState(cursorPoint, ID_2P);
+                }
+                DrawBlock(cursorPoint);
         }
         break;
     case WM_RBUTTONDOWN:
@@ -135,9 +203,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
 
         // Left button is already clicked
-        if (hasMouseCapture) {
-            ReleaseBlocksClick();
-            is3x3Click = TRUE;
+        if (hasInputCaptures[ID_1P]) {
+            ReleaseBlocksInput(ID_1P);
+            is3x3Clicks[ID_1P] = TRUE;
 
             PostMessageW(hwnd, WM_MOUSEMOVE, wParam, lParam);
         }
@@ -148,7 +216,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
         // Right button is clicked only
         else if (!IsMenuOpen) {
             BoardPoint point = { (HIWORD(lParam) - 39) / 16, (LOWORD(lParam) + 4) / 16 };
-            HandleRightClick(point);
+            HandleRightInput(point, ID_1P);
         }
 
         return FALSE;
@@ -167,7 +235,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
 
         // Shift or right button is clicked together
-        is3x3Click = (wParam & 6) ? TRUE : FALSE;
+        is3x3Clicks[ID_1P] = (wParam & 6) ? TRUE : FALSE;
         return CaptureMouseInput(message, wParam, lParam);
 
     case WM_PAINT:
@@ -179,8 +247,17 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
         }
         break;
     case WM_TIMER:
-        TickSeconds();
-        return FALSE;
+        switch (wParam) {
+        case TIME_TIMER_ID:
+            TickSeconds();
+            return FALSE;
+            break;
+        case BLINK_TIMER_ID:
+            blink = !blink;
+            DrawBlock(cursorPoint);
+            break;
+        }
+        break;
 
     case WM_DESTROY:
         PostQuitMessage(0);
@@ -315,14 +392,13 @@ DWORD SimpleGetSystemMetrics(DWORD val) {
     return result;
 }
 
-// The only function that makes hasMouseCapture = True
+// The only function that makes hasInputCaptures = True
 // Called by WM_LBUTTONDOWN and WM_RBUTTONDOWN
 __inline LRESULT CaptureMouseInput(UINT message, WPARAM wParam, LPARAM lParam) {
     // Shared code...
     SetCapture(hWnd);
-    BoardPoint point = { -1, -1 };
-    clickedPoint = point;
-    hasMouseCapture = TRUE;
+    focusedPoints[ID_1P] = nullPoint;
+    hasInputCaptures[ID_1P] = TRUE;
     DisplaySmile(SMILE_WOW);
     return MouseMoveHandler(message, wParam, lParam);
 }
@@ -330,16 +406,16 @@ __inline LRESULT CaptureMouseInput(UINT message, WPARAM wParam, LPARAM lParam) {
 // Called by CaptureMouseInput and WM_MOUSEMOVE
 __inline LRESULT MouseMoveHandler(UINT message, WPARAM wParam, LPARAM lParam) {
     // WM_MOUSEMOVE_Handler!
-    if (!hasMouseCapture) {
+    if (!hasInputCaptures[ID_1P]) {
         return DefWindowProcW(hWnd, message, wParam, lParam);
     }
     else if (!GAME_IS_ON()) {
-        ReleaseMouseCapture();
+        ReleaseInputCapture(ID_1P);
     }
     else {
         // Update Mouse Block
         BoardPoint point = { (HIWORD(lParam) - 39) / 16, (LOWORD(lParam) + 4) / 16};
-        UpdateClickedPointsState(point);
+        UpdateInputPointsState(point, ID_1P);
     }
 
     return DefWindowProcW(hWnd, message, wParam, lParam);

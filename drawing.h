@@ -7,6 +7,9 @@
 #define SMILE_WINNER  3
 #define SMILE_CLICKED 0
 
+#define OFF_CURSOR 0
+#define ON_CURSOR 1
+
 #define SMILE_BITMAP_WIDTH 24
 #define SMILE_BITMAP_HEIGHT 24
 

@@ -26,16 +26,11 @@ PBITMAPINFO lpBitmapInfo;
 HGLOBAL hBitmapResource;
 HPEN hPen;
 
-HDC blockDCs[18];
-HBITMAP blockBitmaps[18];
+HDC blockDCs[2][18];
+HBITMAP blockBitmaps[2][18];
 
 __inline void InitializePen() {
-    if (gameConfig.color) {
-        hPen = CreatePen(PS_SOLID, 1, RGB(128, 128, 128));
-    }
-    else {
-        hPen = (HPEN)GetStockObject(BLACK_PEN);
-    }
+    hPen = CreatePen(PS_SOLID, 1, RGB(128, 128, 128));
 }
 
 __inline HGLOBAL TryLoadBitmapResource(USHORT resourceID) {
@@ -63,24 +58,27 @@ __inline BOOL LoadBitmapResources() {
 __inline void ProcessBlockBitmaps() {
     HDC hWndDC = GetDC(hWnd);
 
-    for (int i = 0; i < _countof(blockDCs); ++i) {
-        blockDCs[i] = CreateCompatibleDC(hWndDC);
+    for (int i = 0; i < _countof(blockDCs[0]); ++i) {
+        blockDCs[OFF_CURSOR][i] = CreateCompatibleDC(hWndDC);
+        blockDCs[ON_CURSOR][i] = CreateCompatibleDC(hWndDC);
 
-        if (blockDCs[i] == NULL) {
+        if (blockDCs[OFF_CURSOR][i] == NULL || blockDCs[ON_CURSOR][i] == NULL) {
             // Maybe that means the original name of the function was "FLoad"
             // This is a bad name dude. 
             OutputDebugStringA("FLoad failed to create compatible dc\n");
             exit(1);
         }
 
-        blockBitmaps[i] = CreateCompatibleBitmap(hWndDC, 16, 16);
+        blockBitmaps[OFF_CURSOR][i] = CreateCompatibleBitmap(hWndDC, 16, 16);
+        blockBitmaps[ON_CURSOR][i] = CreateCompatibleBitmap(hWndDC, 16, 16);
 
-        if (blockBitmaps[i] == NULL) {
+        if (blockBitmaps[OFF_CURSOR][i] == NULL || blockBitmaps[ON_CURSOR][i] == NULL) {
             OutputDebugStringA("Failed to create Bitmap\n");
             exit(1);
         }
-        SelectObject(blockDCs[i], blockBitmaps[i]);
-        SetDIBitsToDevice(blockDCs[i],
+        SelectObject(blockDCs[OFF_CURSOR][i], blockBitmaps[OFF_CURSOR][i]);
+        SelectObject(blockDCs[ON_CURSOR][i], blockBitmaps[ON_CURSOR][i]);
+        SetDIBitsToDevice(blockDCs[OFF_CURSOR][i],
             0, 0,
             16, 16,
             0 + 16 * i, 108,
@@ -89,6 +87,9 @@ __inline void ProcessBlockBitmaps() {
             lpBitmapInfo,
             DIB_RGB_COLORS
         );
+        BitBlt(blockDCs[ON_CURSOR][i], 0, 0, 16, 16, blockDCs[OFF_CURSOR][i], 0, 0, SRCCOPY);
+        BitBlt(blockDCs[ON_CURSOR][i], 3, 3, 11, 11, blockDCs[OFF_CURSOR][i], 3, 3, NOTSRCCOPY);
+
     }
 
     ReleaseDC(hWnd, hWndDC);
@@ -238,9 +239,8 @@ void DisplayAllBlocksInDC(HDC hDC) {
         for (int c = 1; c <= width; c++) {
             // Get the current state of the block
             BYTE block = blockArray[r][c];
-
-            HDC blockState = blockDCs[BLOCK_STATE(block)];
-            blockState = blockDCs[BLOCK_STATE(block)];
+            int isOnCursor = (r == cursorPoint.row && c == cursorPoint.column);
+            HDC blockState = blockDCs[isOnCursor? ON_CURSOR: OFF_CURSOR][BLOCK_STATE(block)];
 
             // Draw the block
             BitBlt(hDC, x, y, 16, 16, blockState, 0, 0, SRCCOPY);
@@ -256,7 +256,8 @@ void DisplayAllBlocksInDC(HDC hDC) {
 void DrawBlock(BoardPoint point) {
     HDC hDC = GetDC(hWnd);
     BYTE block = BLOCK_STATE(ACCESS_BLOCK(point));
-    BitBlt(hDC, point.column * 16 - 4, point.row * 16 + 39, BLOCK_WIDTH, BLOCK_HEIGHT, blockDCs[block], 0, 0, SRCCOPY);
+    int cursorType = (point.row == cursorPoint.row && point.column == cursorPoint.column && blink)? ON_CURSOR: OFF_CURSOR;
+    BitBlt(hDC, point.column * 16 - 4, point.row * 16 + 39, BLOCK_WIDTH, BLOCK_HEIGHT, blockDCs[cursorType][block], 0, 0, SRCCOPY);
     ReleaseDC(hWnd, hDC);
 }
 

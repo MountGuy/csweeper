@@ -45,7 +45,7 @@ typedef struct _Config {
     int ypos;
     int tick;
     int menu;
-    BOOL color;
+    BOOL coop;
     int times[4];
     NameString names[4];
 } Config;

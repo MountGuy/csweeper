@@ -24,7 +24,7 @@ void InitializeConfigFromDefault() {
     gameConfig.ypos = 0;
     gameConfig.tick = 0;
     gameConfig.menu = 0;
-    gameConfig.color = 1;
+    gameConfig.coop = TRUE;
     gameConfig.times[TIME_BEGINNER] = 0;
     gameConfig.times[TIME_INTERMIDIATE] = 0;
     gameConfig.times[TIME_EXPERT] = 0;
