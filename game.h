@@ -74,6 +74,11 @@ extern DWORD stateFlags;
 #define BLOCK_STATE_BOMB_RED_BACKGROUND(playerID) (playerID + BLOCK_STATE_BASE_BOMB_RED_BACKGROUND)
 #define POINT_OF_PLAYER(playerID) (focusedPoints[playerID])
 #define PLAYER_READING_BLOCK(block, playerID) (BLOCK_INFO(block) & focusedFlags[playerID])
+#define SET_SOLVE_STATE(point, state) (solveState[point.row][point.column] = (state))
+
+#define CLOSED 0
+#define OPENED 1
+#define SOLVED 2
 
 extern BYTE blockStateFlags[2];
 extern BYTE blockBombWithXs[2];
@@ -82,6 +87,7 @@ extern BYTE focusedFlags[2];
 extern const BoardPoint nullPoint;
 
 extern BYTE blockArray[BOARD_MAX_HEIGHT][BOARD_MAX_WIDTH];
+extern BYTE solveState[BOARD_MAX_HEIGHT][BOARD_MAX_WIDTH];
 extern BoardPoint focusedPoints[2];
 extern BoardPoint cursorPoint;
 
@@ -105,7 +111,7 @@ void UpdateBlockStateToUnFocused(BoardPoint point, int playerID);
 
 __inline BOOL IsInBoardRange(BoardPoint point);
 __inline void ReplaceFirstNonBomb(BoardPoint point);
-int GetFlagBlocksCount(BoardPoint point);
+int CountNearFlags(BoardPoint point);
 int CountNearBombs(BoardPoint point);
 void ExpandEmptyBlock(BoardPoint point);
 void ShowBlockValue(BoardPoint point);
@@ -115,3 +121,5 @@ void FinishGame(BOOL isWon, int playerID);
 BOOL HandleLeftClick(DWORD dwLocation);
 void HandleRightInput(BoardPoint point, int playerID);
 void TickSeconds();
+
+BOOL Solve(BoardPoint entryPoint);

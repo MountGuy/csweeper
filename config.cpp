@@ -11,6 +11,9 @@ const int displayWidth = SimpleGetSystemMetrics(GET_SCREEN_WIDTH), displayHeight
 const int defWidth = (displayWidth - 30) / 16, defHeight = (displayHeight - 160) / 16;
 const int defMine = (int) (defWidth * defHeight / 5);
 
+//const int defWidth = 30, defHeight = 16;
+//const int defMine = 99;
+
 Config gameConfig;
 
 void InitializeConfigFromDefault() {
