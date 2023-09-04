@@ -54,6 +54,8 @@ extern DWORD stateFlags;
 #define BLOCK_INFO_MASK 0x1E0
 #define BLOCK_FOCUSED_MASK 0x180
 
+#define POINT_EQUAL(point1, point2) ((point1).row == (point2).row && (point1).column == (point2).column)
+
 #define BLOCK_IS_REVEALED(block) ((block) & REVEALED_FLAG)
 #define BLOCK_IS_BOMB(block) ((block) & BOMB_FLAG)
 
@@ -63,8 +65,8 @@ extern DWORD stateFlags;
 #define BLOCK_IS_FOCUSED(block) ((block) & BLOCK_FOCUSED_MASK)
 #define BLOCK_IS_STATE(block, state) (BLOCK_STATE(block) == state)
 
-#define BOARD_MAX_HEIGHT 3000
-#define BOARD_MAX_WIDTH 3000
+#define BOARD_MAX_HEIGHT 300
+#define BOARD_MAX_WIDTH 1000
 
 #define ID_1P 0
 #define ID_2P 1
@@ -75,10 +77,6 @@ extern DWORD stateFlags;
 #define POINT_OF_PLAYER(playerID) (focusedPoints[playerID])
 #define PLAYER_READING_BLOCK(block, playerID) (BLOCK_INFO(block) & focusedFlags[playerID])
 #define SET_SOLVE_STATE(point, state) (solveState[point.row][point.column] = (state))
-
-#define CLOSED 0
-#define OPENED 1
-#define SOLVED 2
 
 extern BYTE blockStateFlags[2];
 extern BYTE blockBombWithXs[2];
@@ -113,6 +111,7 @@ __inline BOOL IsInBoardRange(BoardPoint point);
 __inline void ReplaceFirstNonBomb(BoardPoint point);
 int CountNearFlags(BoardPoint point);
 int CountNearBombs(BoardPoint point);
+int CountNearUnRevealed(BoardPoint point);
 void ExpandEmptyBlock(BoardPoint point);
 void ShowBlockValue(BoardPoint point);
 void RevealAllBombs(BYTE revealedBombsState, int playerID);

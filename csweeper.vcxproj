@@ -135,6 +135,7 @@
     <ClInclude Include="framework.h" />
     <ClInclude Include="game.h" />
     <ClInclude Include="Resource.h" />
+    <ClInclude Include="solver.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="util.h" />
   </ItemGroup>
@@ -143,6 +144,7 @@
     <ClCompile Include="csweeper.cpp" />
     <ClCompile Include="drawing.cpp" />
     <ClCompile Include="game.cpp" />
+    <ClCompile Include="solver.cpp" />
     <ClCompile Include="util.cpp" />
   </ItemGroup>
   <ItemGroup>

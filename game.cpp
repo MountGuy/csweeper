@@ -3,6 +3,7 @@
 #include "game.h"
 #include "csweeper.h"
 #include "drawing.h"
+#include "solver.h"
 #include "config.h"
 #include "util.h"
 
@@ -11,7 +12,7 @@ DWORD stateFlags = STATE_GAME_FINISHED | STATE_WINDOW_MINIMIZED;
 BOOL isTimerOnAndShowed;
 BOOL IsTimerOnTemp;
 
-BOOL assistOn = FALSE;
+BOOL assistOn = TRUE;
 
 BYTE blockArray[BOARD_MAX_HEIGHT][BOARD_MAX_WIDTH];
 BYTE solveState[BOARD_MAX_HEIGHT][BOARD_MAX_WIDTH];
@@ -36,10 +37,6 @@ int numberOfRevealedBlocks;
 int currentRowColumnListIndex;
 int rowsList[10000];
 int columnsList[10000];
-
-BoardPoint openedStack[10000];
-BoardPoint openedStackSpare[10000];
-int openedStackIndex = 0, openedStackSpareIndex = 0;
 
 // New game
 void InitializeNewGame() {
@@ -125,7 +122,6 @@ void InitializeBlockArrayBorders() {
     solvedNum = 0;
     openedNum = 0;
     openedStackIndex = 0;
-    openedStackSpareIndex = 0;
 }
 
 // Called on button up and MouseMoveHandler with click
@@ -178,7 +174,7 @@ void HandleBlockInput(int playerID) {
         }
 
         // Check if 3x3 click
-        if (is3x3Clicks[playerID]) {
+        if (is3x3Clicks[playerID] || BLOCK_IS_REVEALED(ACCESS_BLOCK(point))) {
             Handle3x3BlockInput(playerID);
         }
         else {
@@ -378,8 +374,8 @@ int CountNearFlags(BoardPoint point) {
     int flagsCount = 0;
 
     // Search in the surrounding blocks
-    for (int r = (point.row - 1); r <= (point.row + 1); ++r) {
-        for (int c = (point.column - 1); c <= (point.column + 1); ++c) {
+    for (int r = (point.row - 1); r <= (point.row + 1); r++) {
+        for (int c = (point.column - 1); c <= (point.column + 1); c++) {
             BYTE blockState = BLOCK_STATE(blockArray[r][c]);
             if (blockState == BLOCK_STATE_1P_FLAG || blockState == BLOCK_STATE_2P_FLAG) {
                 flagsCount++;
@@ -407,18 +403,18 @@ int CountNearBombs(BoardPoint point) {
 
 // Count the number of revealed blocks near the block
 int CountNearUnRevealed(BoardPoint point) {
-    int revealedCount = 0;
+    int unRevealedCount = 0;
 
     for (int r = (point.row - 1); r <= (point.row + 1); r++) {
         for (int c = (point.column - 1); c <= (point.column + 1); c++) {
-            BoardPoint point = { r, c };
-            if (IsInBoardRange(point) && !BLOCK_IS_REVEALED(blockArray[r][c])) {
-                revealedCount++;
+            BoardPoint tPoint = { r, c };
+            if (IsInBoardRange(tPoint) && !(r == point.row && c == point.column) && !BLOCK_IS_REVEALED(blockArray[r][c])) {
+                unRevealedCount++;
             }
         }
     }
 
-    return revealedCount;
+    return unRevealedCount;
 }
 
 
@@ -435,11 +431,9 @@ void ExpandEmptyBlock(BoardPoint point) {
 
         for (int c = column - 1; c <= column + 1; c++) {
             for (int r = row - 1; r <= row + 1; r++) {
-                if (r == row && c == column) {
-                    continue;
-                }
-                BoardPoint point = { r, c };
-                ShowBlockValue(point);
+                BoardPoint tPoint = { r, c };
+                if (r == row && c == column || !IsInBoardRange(tPoint)) continue;
+                ShowBlockValue(tPoint);
             }
         }
         i++;
@@ -459,7 +453,7 @@ void ShowBlockValue(BoardPoint point) {
         SET_SOLVE_STATE(point, SOLVED);
     } else if (nearBombsCount > 0) {
         openedNum++;
-        openedStackSpare[openedStackSpareIndex++] = point;
+        openedStack[openedStackIndex++] = point;
         SET_SOLVE_STATE(point, OPENED);
     }
 
@@ -609,102 +603,4 @@ void TickSeconds() {
         timerSeconds++;
         DisplayTimerSeconds();
     }
-}
-
-//-----------------------------------------------------------
-
-int Heuristic1(BoardPoint point) {
-    int result = 0;
-
-    SET_SOLVE_STATE(point, SOLVED);
-    for (int r = (point.row - 1); r <= (point.row + 1); r++) {
-        for (int c = (point.column - 1); c <= (point.column + 1); c++) {
-            BoardPoint point = { r, c };
-            BYTE block = ACCESS_BLOCK(point);
-            if (IsInBoardRange(point) && solveState[r][c] != SOLVED && BLOCK_STATE(block) == BLOCK_STATE_EMPTY_UNCLICKED) {
-                ChangeBlockState(point, blockStateFlags[ID_1P]);
-                AddAndDisplayLeftFlags(-1);
-                result++;
-            }
-        }
-    }
-
-    return result;
-}
-
-int Heuristic2(BoardPoint point) {
-    int result = 0;
-
-    SET_SOLVE_STATE(point, SOLVED);
-    for (int r = (point.row - 1); r <= (point.row + 1); r++) {
-        for (int c = (point.column - 1); c <= (point.column + 1); c++) {
-            BoardPoint point = { r, c };
-            BYTE block = ACCESS_BLOCK(point);
-            if (IsInBoardRange(point) && solveState[r][c] != SOLVED && BLOCK_STATE(block) == BLOCK_STATE_EMPTY_UNCLICKED) {
-                ExpandEmptyBlock(point);
-                result++;
-            }
-        }
-    }
-
-    return result;
-}
-
-int Heuristic3(BoardPoint point) {
-    int result = 0;
-
-    return result;
-}
-
-int Heuristic(BoardPoint point) {
-    BYTE block = ACCESS_BLOCK(point);
-    int numBombs = CountNearBombs(point);
-    int numFlags = CountNearFlags(point);
-    int numUnRevealed = CountNearUnRevealed(point);
-    int result = 0;
-
-    if (solveState[point.row][point.column] == SOLVED) {
-        return 0;
-    }
-    if (solveState[point.row][point.column] == CLOSED) {
-        openedStackSpare[openedStackSpareIndex++] = point;
-        return 0;
-    }
-
-    if (numUnRevealed == numBombs) result += Heuristic1(point);
-    else if (numBombs == numFlags) result += Heuristic2(point);
-    else {
-        openedStackSpare[openedStackSpareIndex++] = point;
-    }
-
-    return result;
-}
-
-// Solve the board
-BOOL Solve(BoardPoint entryPoint) {
-    char str[100];
-    static int calls = 0;
-
-    openedStackIndex = 0;
-    openedStackSpareIndex = 0;
-    ExpandEmptyBlock(entryPoint);
-
-    while (1) {
-        int newOpened = 0;
-        for (int idx = 0; idx < openedStackSpareIndex; idx++) {
-            openedStack[idx] = openedStackSpare[idx];
-        }
-        openedStackIndex = openedStackSpareIndex;
-        openedStackSpareIndex = 0;
-        for (int idx = 0; idx < openedStackIndex; idx++) {
-            newOpened += Heuristic(openedStack[idx]);
-            //Sleep(1000);
-        }
-        if (openedStackSpareIndex == 0 || newOpened == 0) {
-            break;
-        }
-    }
-
-
-    return FALSE;
 }
