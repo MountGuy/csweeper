@@ -89,6 +89,8 @@ extern BYTE solveState[BOARD_MAX_HEIGHT][BOARD_MAX_WIDTH];
 extern BoardPoint focusedPoints[2];
 extern BoardPoint cursorPoint;
 
+extern int numberOfRevealedBlocks;
+
 void InitializeNewGame();
 BOOL InitializeBitmapsAndBlockArray();
 void InitializeBlockArrayBorders();

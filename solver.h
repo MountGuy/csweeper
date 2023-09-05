@@ -24,8 +24,8 @@ extern BoardPoint openedStackSpare[10000];
 extern int openedStackIndex;
 
 int CompPoint(BoardPoint point1, BoardPoint point2);
-ConstraintPtr AddConstraintFromRevealed(BoardPoint revPoint);
-ConstraintPtr GetSubConstraint(ConstraintPtr constPtrOut, ConstraintPtr constPtrIn);
+ConstraintPtr GetEQConstraint(BoardPoint revPoint);
+int GetSubConstraint(ConstraintPtr constPtrOut, ConstraintPtr constPtrIn, ConstraintPtr newConst1, ConstraintPtr newConst2);
 int SolveTrivialConst(ConstraintPtr constPtr);
 
 int Heuristic1(BoardPoint point);
