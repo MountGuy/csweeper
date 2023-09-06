@@ -22,10 +22,12 @@ typedef Constraint* ConstraintPtr;
 extern BoardPoint openedList[10000];
 extern BoardPoint openedListCopy[10000];
 extern int openedListIndex;
-extern BYTE solveState[BOARD_MAX_HEIGHT][BOARD_MAX_WIDTH];
+extern BYTE solverState[BOARD_MAX_HEIGHT][BOARD_MAX_WIDTH];
+
+#define SOLVER_STATE(point) (solverState[point.row][point.column])
 
 int CompPoint(BoardPoint point1, BoardPoint point2);
-ConstraintPtr GetEQConstraint(BoardPoint revPoint);
+void GetEQConstraint(BoardPoint point, ConstraintPtr newConst);
 int GetSubConstraint(ConstraintPtr constPtrOut, ConstraintPtr constPtrIn, ConstraintPtr newConst1, ConstraintPtr newConst2);
 int SolveTrivialConst(ConstraintPtr constPtr);
 int SearchConst(BoardPoint point);

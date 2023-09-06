@@ -100,7 +100,6 @@ void InitializeBlockArrayBorders() {
     for (int row = 0; row <= height + 1; row++) {
         for (int column = 0; column <= width + 1; column++) {
             blockArray[row][column] = BLOCK_STATE_EMPTY_UNCLICKED;
-            solveState[row][column] = CLOSED;
         }
     }
     for (int column = 0; column <= width + 1; column++) {
@@ -447,14 +446,6 @@ void ExpandEmptyBlock(BoardPoint point) {
 void ShowBlockValue(BoardPoint point) {
     BYTE blockValue = ACCESS_BLOCK(point);
     int nearBombsCount = CountNearBombs(point);
-    if (nearBombsCount == 0) {
-        solvedNum++;
-        SET_SOLVE_STATE(point, SOLVED);
-    } else if (nearBombsCount > 0) {
-        openedNum++;
-        openedList[openedListIndex++] = point;
-        SET_SOLVE_STATE(point, OPENED);
-    }
 
     if (BLOCK_IS_REVEALED(blockValue)) {
         return;

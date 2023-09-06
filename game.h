@@ -76,7 +76,6 @@ extern DWORD stateFlags;
 #define BLOCK_STATE_BOMB_RED_BACKGROUND(playerID) (playerID + BLOCK_STATE_BASE_BOMB_RED_BACKGROUND)
 #define POINT_OF_PLAYER(playerID) (focusedPoints[playerID])
 #define PLAYER_READING_BLOCK(block, playerID) (BLOCK_INFO(block) & focusedFlags[playerID])
-#define SET_SOLVE_STATE(point, state) (solveState[point.row][point.column] = (state))
 
 extern BYTE blockStateFlags[2];
 extern BYTE blockBombWithXs[2];

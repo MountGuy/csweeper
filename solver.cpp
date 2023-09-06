@@ -3,7 +3,7 @@
 #include "game.h"
 #include "drawing.h"
 
-BYTE solveState[BOARD_MAX_HEIGHT][BOARD_MAX_WIDTH];
+BYTE solverState[BOARD_MAX_HEIGHT][BOARD_MAX_WIDTH];
 
 BoardPoint openedList[10000];
 BoardPoint openedListCopy[10000];
@@ -81,7 +81,7 @@ void ResetConsts() {
                 free(consts[r][c][n]);
             }
             constNum[r][c] = 0;
-            solveState[r][c] = (solveState[r][c] == CONSTRAINED ? OPENED : solveState[r][c]);
+            solverState[r][c] = (solverState[r][c] == CONSTRAINED ? OPENED : solverState[r][c]);
         }
     }
 }
@@ -92,29 +92,27 @@ BOOL AddConstraint(ConstraintPtr newConst) {
     int constN = 0;
     for (; constN < constNum[point.row][point.column]; constN++) {
         if (EqualConst(newConst, consts[point.row][point.column][constN])) {
-            free(newConst);
             return FALSE;
         }
     }
 
-    consts[point.row][point.column][constN] = newConst;
+    ConstraintPtr newConstCopy = (ConstraintPtr) malloc(sizeof(Constraint));
+    *newConstCopy = *newConst;
+    
+    consts[point.row][point.column][constN] = newConstCopy;
     constNum[point.row][point.column]++;
 
     return TRUE;
 }
 
-ConstraintPtr GetEQConstraint(BoardPoint point) {
+void GetEQConstraint(BoardPoint point, ConstraintPtr newConst) {
     int newPointNum = 0, mineNum = CountNearBombs(point) - CountNearFlags(point);
-
-    ConstraintPtr newConst = (ConstraintPtr) malloc(sizeof(Constraint));
 
     for (int r = (point.row - 1); r <= (point.row + 1); r++) {
         for (int c = (point.column - 1); c <= (point.column + 1); c++) {
             BoardPoint constPoint = { r, c };
-            BYTE block = ACCESS_BLOCK(constPoint);            
-
             if (CompPoint(constPoint, point) != 0 && IsInBoardRange(constPoint)) {
-                if (BLOCK_IS_STATE(block, BLOCK_STATE_EMPTY_UNCLICKED) && solveState[r][c] != SOLVED) newConst->points[newPointNum++] = constPoint;
+                if (solverState[r][c] == CLOSED) newConst->points[newPointNum++] = constPoint;
             }
         }
     }
@@ -122,11 +120,10 @@ ConstraintPtr GetEQConstraint(BoardPoint point) {
     newConst->constType = EQ;
     newConst->mineNum = mineNum;
     newConst->pointNum = newPointNum;
-
-    return newConst;
 }
 
-// Assume that GT - GT or LT - LT is not comming: filtered by the caller
+// Assume that GT - GT or LT - LT is not coming: filtered by the caller
+// Return the number of valid constraints
 int GetSubConstraint(ConstraintPtr outConst, ConstraintPtr inConst, ConstraintPtr newConst1, ConstraintPtr newConst2) {
     int outIdx = 0, inIdx = 0, newPointNum = 0, commonNum = 0;
     int typeOut = outConst->constType, typeIn = inConst->constType;
@@ -223,11 +220,10 @@ int SolveTrivialConst(ConstraintPtr constPtr) {
     if (constPtr->mineNum == 0 && constPtr->constType != GT) {
         for (int idx = 0; idx < constPtr->pointNum; idx++) {
             BoardPoint point = constPtr->points[idx];
-            if (solveState[point.row][point.column] == CLOSED) {
+            if (SOLVER_STATE(point) == CLOSED) {
                 openedList[openedListIndex++] = point;
-                SET_SOLVE_STATE(point, OPENED);
-                ACCESS_BLOCK(point) = CountNearBombs(point) | REVEALED_FLAG;
-                DrawBlock(point);
+                SOLVER_STATE(point) = OPENED;
+                ChangeBlockState(point, CountNearBombs(point) | REVEALED_FLAG);
                 result++;
             }
         }
@@ -235,8 +231,8 @@ int SolveTrivialConst(ConstraintPtr constPtr) {
     else if (constPtr->mineNum == constPtr->pointNum && constPtr->constType != LT) {
         for (int idx = 0; idx < constPtr->pointNum; idx++) {
             BoardPoint point = constPtr->points[idx];
-            if (solveState[point.row][point.column] != SOLVED) {
-                SET_SOLVE_STATE(point, SOLVED);
+            if (SOLVER_STATE(point) != SOLVED) {
+                SOLVER_STATE(point) = SOLVED;
                 ChangeBlockState(point, blockStateFlags[ID_1P]);
                 AddAndDisplayLeftFlags(-1);
                 result++;
@@ -274,11 +270,7 @@ int SynthConst() {
                                 for (int cn = 0; cn < valConstNum; cn++) {
                                     int openFromConst = SolveTrivialConst(newConst + cn);
                                     if (openFromConst > 0) newOpenNum += openFromConst;
-                                    else {
-                                        ConstraintPtr newConstPtr = (ConstraintPtr) malloc(sizeof(Constraint));
-                                        *newConstPtr = newConst[cn];
-                                        newConstNum += AddConstraint(newConstPtr);
-                                    }
+                                    else newConstNum += AddConstraint(newConst + cn);
                                 }
                             }
                         }
@@ -291,43 +283,45 @@ int SynthConst() {
 }
 
 int SearchConst(BoardPoint point) {
-    BYTE block = ACCESS_BLOCK(point);
-    int numBombs = CountNearBombs(point);
-    int numFlags = CountNearFlags(point);
-    int numUnRevealed = CountNearUnRevealed(point);
+    Constraint newConst;
 
-    if (solveState[point.row][point.column] == SOLVED) {
-        return FALSE;
-    }
-    if (solveState[point.row][point.column] == CLOSED) {
-        openedList[openedListIndex++] = point;
-        return FALSE;
-    }
-    if (solveState[point.row][point.column] != CONSTRAINED) {
-        SET_SOLVE_STATE(point, CONSTRAINED);
-        openedList[openedListIndex++] = point;
-        ConstraintPtr newConst = GetEQConstraint(point);
-        if (newConst->pointNum == 0) {
-            free(newConst);
+    if (SOLVER_STATE(point) == OPENED) {
+        SOLVER_STATE(point) = CONSTRAINED;
+        GetEQConstraint(point, &newConst);
+        int openFromConst = SolveTrivialConst(&newConst);
+        if (openFromConst > 0 || newConst.pointNum == 0) {
+            SOLVER_STATE(point) = SOLVED;
+            return openFromConst;
+        }
+        else {
+            openedList[openedListIndex++] = point;
+            AddConstraint(&newConst);
             return 0;
         }
-        int openFromConst = SolveTrivialConst(newConst);
-        if (openFromConst > 0) return openFromConst;
-        else AddConstraint(newConst);
     }
-    return 0;
+    else return 0;
+}
+
+void InitSolver(BoardPoint entryPoint) {
+    for (int r = 1; r <= height; r++) {
+        for (int c = 1; c <= width; c++) {
+            solverState[r][c] = CLOSED;
+        }
+    }
+
+    openedListIndex = 0;
+    openedList[openedListIndex++] = entryPoint;
+    SOLVER_STATE(entryPoint) = OPENED;
+    ACCESS_BLOCK(entryPoint) = CountNearBombs(entryPoint) | REVEALED_FLAG;
+    DrawBlock(entryPoint);
 }
 
 // Solve the board
 BOOL Solve(BoardPoint entryPoint) {
-    int listIndexCopy = 0, newOpenNum = 0, totalOpenNum = 0;
+    int listIndexCopy = 0, newOpenNum = 0, totalOpenNum = 1;
+    char str[100];
 
-    openedListIndex = 0;
-    openedList[openedListIndex++] = entryPoint;
-    SET_SOLVE_STATE(entryPoint, OPENED);
-    ACCESS_BLOCK(entryPoint) = CountNearBombs(entryPoint) | REVEALED_FLAG;
-    DrawBlock(entryPoint);
-    totalOpenNum++;
+    InitSolver(entryPoint);
 
     while (1) {
         newOpenNum = 0;
@@ -350,18 +344,6 @@ BOOL Solve(BoardPoint entryPoint) {
         totalOpenNum += newOpenNum;
     }
     ResetConsts();
-
-    char str[100];
-    for (int r = 1; r <= height; r++) {
-        for (int c = 1; c <= width; c++) {
-            sprintf_s(str, sizeof(str), "%d ", solveState[r][c]);
-            OutputDebugStringA(str);
-        }
-        OutputDebugStringA("\n");
-    }
-    sprintf_s(str, sizeof(str), "%d %d\n", totalOpenNum, numberOfEmptyBlocks);
-    OutputDebugStringA(str);
-    OutputDebugStringA("\n");
 
     return FALSE;
 }
