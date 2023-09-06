@@ -2,8 +2,7 @@
 
 #define CLOSED 0
 #define OPENED 1
-#define SOLVED 2
-#define CONSTRAINED 3
+#define FLAGED 2
 
 #define EQ 0
 #define GT 1
@@ -30,5 +29,5 @@ int CompPoint(BoardPoint point1, BoardPoint point2);
 void GetEQConstraint(BoardPoint point, ConstraintPtr newConst);
 int GetSubConstraint(ConstraintPtr constPtrOut, ConstraintPtr constPtrIn, ConstraintPtr newConst1, ConstraintPtr newConst2);
 int SolveTrivialConst(ConstraintPtr constPtr);
-int SearchConst(BoardPoint point);
+int ApplyTactic(BoardPoint point);
 BOOL Solve(BoardPoint entryPoint);

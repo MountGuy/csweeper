@@ -81,7 +81,6 @@ void ResetConsts() {
                 free(consts[r][c][n]);
             }
             constNum[r][c] = 0;
-            solverState[r][c] = (solverState[r][c] == CONSTRAINED ? OPENED : solverState[r][c]);
         }
     }
 }
@@ -106,19 +105,20 @@ BOOL AddConstraint(ConstraintPtr newConst) {
 }
 
 void GetEQConstraint(BoardPoint point, ConstraintPtr newConst) {
-    int newPointNum = 0, mineNum = CountNearBombs(point) - CountNearFlags(point);
+    int newPointNum = 0, mineNum = CountNearBombs(point), flagNum = 0;
 
     for (int r = (point.row - 1); r <= (point.row + 1); r++) {
         for (int c = (point.column - 1); c <= (point.column + 1); c++) {
             BoardPoint constPoint = { r, c };
             if (CompPoint(constPoint, point) != 0 && IsInBoardRange(constPoint)) {
                 if (solverState[r][c] == CLOSED) newConst->points[newPointNum++] = constPoint;
+                else if (solverState[r][c] == FLAGED) flagNum++;
             }
         }
     }
 
     newConst->constType = EQ;
-    newConst->mineNum = mineNum;
+    newConst->mineNum = mineNum - flagNum;
     newConst->pointNum = newPointNum;
 }
 
@@ -231,8 +231,8 @@ int SolveTrivialConst(ConstraintPtr constPtr) {
     else if (constPtr->mineNum == constPtr->pointNum && constPtr->constType != LT) {
         for (int idx = 0; idx < constPtr->pointNum; idx++) {
             BoardPoint point = constPtr->points[idx];
-            if (SOLVER_STATE(point) != SOLVED) {
-                SOLVER_STATE(point) = SOLVED;
+            if (SOLVER_STATE(point) != FLAGED) {
+                SOLVER_STATE(point) = FLAGED;
                 ChangeBlockState(point, blockStateFlags[ID_1P]);
                 AddAndDisplayLeftFlags(-1);
                 result++;
@@ -282,24 +282,19 @@ int SynthConst() {
     }
 }
 
-int SearchConst(BoardPoint point) {
+int ApplyTactic(BoardPoint point) {
     Constraint newConst;
 
-    if (SOLVER_STATE(point) == OPENED) {
-        SOLVER_STATE(point) = CONSTRAINED;
-        GetEQConstraint(point, &newConst);
-        int openFromConst = SolveTrivialConst(&newConst);
-        if (openFromConst > 0 || newConst.pointNum == 0) {
-            SOLVER_STATE(point) = SOLVED;
-            return openFromConst;
-        }
-        else {
-            openedList[openedListIndex++] = point;
-            AddConstraint(&newConst);
-            return 0;
-        }
+    GetEQConstraint(point, &newConst);
+    int openFromConst = SolveTrivialConst(&newConst);
+    if (openFromConst > 0 || newConst.pointNum == 0) {
+        return openFromConst;
     }
-    else return 0;
+    else {
+        openedList[openedListIndex++] = point;
+        AddConstraint(&newConst);
+        return 0;
+    }
 }
 
 void InitSolver(BoardPoint entryPoint) {
@@ -334,7 +329,7 @@ BOOL Solve(BoardPoint entryPoint) {
         openedListIndex = 0;
 
         for (int idx = 0; idx < listIndexCopy; idx++) {
-            newOpenNum += SearchConst(openedListCopy[idx]);
+            newOpenNum += ApplyTactic(openedListCopy[idx]);
         }
 
         if (newOpenNum == 0) {
