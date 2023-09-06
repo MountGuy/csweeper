@@ -106,10 +106,6 @@ BOOL AddConstraint(ConstraintPtr newConst) {
 ConstraintPtr GetEQConstraint(BoardPoint point) {
     int newPointNum = 0, mineNum = CountNearBombs(point) - CountNearFlags(point);
 
-    if (mineNum == 0) {
-        return NULL;
-    }
-
     ConstraintPtr newConst = (ConstraintPtr) malloc(sizeof(Constraint));
 
     for (int r = (point.row - 1); r <= (point.row + 1); r++) {
@@ -221,15 +217,6 @@ int GetSubConstraint(ConstraintPtr outConst, ConstraintPtr inConst, ConstraintPt
     }
 }
 
-int OpenEmpty(BoardPoint point) {
-    if (solveState[point.row][point.column] != CLOSED) return 0;
-    openedList[openedListIndex++] = point;
-    ACCESS_BLOCK(point) = CountNearBombs(point) | REVEALED_FLAG;
-    DrawBlock(point);
-    SET_SOLVE_STATE(point, OPENED);
-    return 1;
-}
-
 int SolveTrivialConst(ConstraintPtr constPtr) {
     int newIdx = 0, ptrN = 0, result = 0;
 
@@ -303,52 +290,7 @@ int SynthConst() {
     }
 }
 
-int Heuristic1(BoardPoint point) {
-    int result = 0;
-
-    SET_SOLVE_STATE(point, SOLVED);
-    for (int r = (point.row - 1); r <= (point.row + 1); r++) {
-        for (int c = (point.column - 1); c <= (point.column + 1); c++) {
-            BoardPoint tPoint = { r, c };
-            BYTE block = ACCESS_BLOCK(tPoint);
-            if (IsInBoardRange(tPoint) && solveState[r][c] != SOLVED && BLOCK_IS_STATE(block, BLOCK_STATE_EMPTY_UNCLICKED)) {
-                ChangeBlockState(tPoint, blockStateFlags[ID_1P]);
-                AddAndDisplayLeftFlags(-1);
-                SET_SOLVE_STATE(tPoint, SOLVED);
-                result++;
-            }
-        }
-    }
-
-    return result;
-}
-
-int Heuristic2(BoardPoint point) {
-    int result = 0;
-
-    SET_SOLVE_STATE(point, SOLVED);
-    for (int r = (point.row - 1); r <= (point.row + 1); r++) {
-        for (int c = (point.column - 1); c <= (point.column + 1); c++) {
-            BoardPoint tPoint = { r, c };
-            BYTE block = ACCESS_BLOCK(tPoint);
-            if (IsInBoardRange(tPoint) && solveState[r][c] != SOLVED && BLOCK_IS_STATE(block, BLOCK_STATE_EMPTY_UNCLICKED)) {
-                result += OpenEmpty(tPoint);
-            }
-        }
-    }
-
-    return result;
-}
-
-int Heuristic3(BoardPoint point) {
-    SET_SOLVE_STATE(point, CONSTRAINED);
-    openedList[openedListIndex++] = point;
-    AddConstraint(GetEQConstraint(point));
-
-    return 0;
-}
-
-int Heuristic(BoardPoint point) {
+int SearchConst(BoardPoint point) {
     BYTE block = ACCESS_BLOCK(point);
     int numBombs = CountNearBombs(point);
     int numFlags = CountNearFlags(point);
@@ -361,10 +303,18 @@ int Heuristic(BoardPoint point) {
         openedList[openedListIndex++] = point;
         return FALSE;
     }
-    if (numUnRevealed == numBombs) return Heuristic1(point);
-    else if (numBombs == numFlags) return Heuristic2(point);
-    else if (solveState[point.row][point.column] != CONSTRAINED) return Heuristic3(point);
-
+    if (solveState[point.row][point.column] != CONSTRAINED) {
+        SET_SOLVE_STATE(point, CONSTRAINED);
+        openedList[openedListIndex++] = point;
+        ConstraintPtr newConst = GetEQConstraint(point);
+        if (newConst->pointNum == 0) {
+            free(newConst);
+            return 0;
+        }
+        int openFromConst = SolveTrivialConst(newConst);
+        if (openFromConst > 0) return openFromConst;
+        else AddConstraint(newConst);
+    }
     return 0;
 }
 
@@ -373,7 +323,11 @@ BOOL Solve(BoardPoint entryPoint) {
     int listIndexCopy = 0, newOpenNum = 0, totalOpenNum = 0;
 
     openedListIndex = 0;
-    totalOpenNum += OpenEmpty(entryPoint);
+    openedList[openedListIndex++] = entryPoint;
+    SET_SOLVE_STATE(entryPoint, OPENED);
+    ACCESS_BLOCK(entryPoint) = CountNearBombs(entryPoint) | REVEALED_FLAG;
+    DrawBlock(entryPoint);
+    totalOpenNum++;
 
     while (1) {
         newOpenNum = 0;
@@ -386,7 +340,7 @@ BOOL Solve(BoardPoint entryPoint) {
         openedListIndex = 0;
 
         for (int idx = 0; idx < listIndexCopy; idx++) {
-            newOpenNum += Heuristic(openedListCopy[idx]);
+            newOpenNum += SearchConst(openedListCopy[idx]);
         }
 
         if (newOpenNum == 0) {

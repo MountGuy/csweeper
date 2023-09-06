@@ -28,9 +28,5 @@ int CompPoint(BoardPoint point1, BoardPoint point2);
 ConstraintPtr GetEQConstraint(BoardPoint revPoint);
 int GetSubConstraint(ConstraintPtr constPtrOut, ConstraintPtr constPtrIn, ConstraintPtr newConst1, ConstraintPtr newConst2);
 int SolveTrivialConst(ConstraintPtr constPtr);
-
-int Heuristic1(BoardPoint point);
-int Heuristic2(BoardPoint point);
-int Heuristic3(BoardPoint point);
-int Heuristic(BoardPoint point);
+int SearchConst(BoardPoint point);
 BOOL Solve(BoardPoint entryPoint);
