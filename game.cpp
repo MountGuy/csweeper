@@ -15,7 +15,6 @@ BOOL IsTimerOnTemp;
 BOOL assistOn = TRUE;
 
 BYTE blockArray[BOARD_MAX_HEIGHT][BOARD_MAX_WIDTH];
-BYTE solveState[BOARD_MAX_HEIGHT][BOARD_MAX_WIDTH];
 int solvedNum = 0, openedNum = 0;
 BoardPoint focusedPoints[2] = {{ -1, -1 }, { -1, -1 }};
 BoardPoint cursorPoint = { -1, -1 };
@@ -121,7 +120,7 @@ void InitializeBlockArrayBorders() {
     }
     solvedNum = 0;
     openedNum = 0;
-    openedStackIndex = 0;
+    openedListIndex = 0;
 }
 
 // Called on button up and MouseMoveHandler with click
@@ -453,7 +452,7 @@ void ShowBlockValue(BoardPoint point) {
         SET_SOLVE_STATE(point, SOLVED);
     } else if (nearBombsCount > 0) {
         openedNum++;
-        openedStack[openedStackIndex++] = point;
+        openedList[openedListIndex++] = point;
         SET_SOLVE_STATE(point, OPENED);
     }
 

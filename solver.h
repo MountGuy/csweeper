@@ -19,9 +19,10 @@ typedef struct {
 
 typedef Constraint* ConstraintPtr;
 
-extern BoardPoint openedStack[10000];
-extern BoardPoint openedStackSpare[10000];
-extern int openedStackIndex;
+extern BoardPoint openedList[10000];
+extern BoardPoint openedListCopy[10000];
+extern int openedListIndex;
+extern BYTE solveState[BOARD_MAX_HEIGHT][BOARD_MAX_WIDTH];
 
 int CompPoint(BoardPoint point1, BoardPoint point2);
 ConstraintPtr GetEQConstraint(BoardPoint revPoint);

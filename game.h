@@ -85,11 +85,11 @@ extern BYTE focusedFlags[2];
 extern const BoardPoint nullPoint;
 
 extern BYTE blockArray[BOARD_MAX_HEIGHT][BOARD_MAX_WIDTH];
-extern BYTE solveState[BOARD_MAX_HEIGHT][BOARD_MAX_WIDTH];
 extern BoardPoint focusedPoints[2];
 extern BoardPoint cursorPoint;
 
 extern int numberOfRevealedBlocks;
+extern int numberOfEmptyBlocks;
 
 void InitializeNewGame();
 BOOL InitializeBitmapsAndBlockArray();
